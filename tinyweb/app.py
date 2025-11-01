@@ -11,6 +11,7 @@ import sys
 import warnings
 import datetime
 import secrets
+from utils.auth_routes import require_auth
 
 warnings.filterwarnings("ignore")
 
@@ -451,6 +452,7 @@ def get_data_files():
 
 
 @app.route("/api/upload-data", methods=["POST"])
+@require_auth
 def upload_data():
     """Upload CSV or feather data file"""
     try:
@@ -522,6 +524,7 @@ def upload_data():
 
 
 @app.route("/api/load-data", methods=["POST"])
+@require_auth
 def load_data():
     """Load data file"""
     try:
@@ -597,6 +600,7 @@ def load_data():
 
 
 @app.route("/api/predict", methods=["POST"])
+@require_auth
 def predict():
     """Perform prediction"""
     try:
@@ -861,6 +865,7 @@ def predict():
 
 
 @app.route("/api/load-model", methods=["POST"])
+@require_auth
 def load_model():
     """Load Kronos model"""
     global tokenizer, model, predictor
