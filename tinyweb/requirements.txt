@@ -1,0 +1,9 @@
+flask==2.3.3
+flask-cors==4.0.0
+pandas==2.2.2
+numpy==2.3.4
+plotly==5.17.0
+torch>=2.1.0
+huggingface_hub==0.33.1
+web3>=6.0.0
+eth-account>=0.8.0
