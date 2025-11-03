@@ -38,7 +38,6 @@ class UserDB:
             CREATE TABLE IF NOT EXISTS users (
                 wallet_address TEXT PRIMARY KEY,
                 nickname TEXT,
-                email TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 last_login TIMESTAMP,
                 login_count INTEGER DEFAULT 0
@@ -123,7 +122,6 @@ class UserDB:
             return {
                 "wallet_address": row["wallet_address"],
                 "nickname": row["nickname"],
-                "email": row["email"],
                 "created_at": row["created_at"],
                 "last_login": row["last_login"],
                 "login_count": row["login_count"],
@@ -189,16 +187,13 @@ class UserDB:
 
         return updated
 
-    def update_user_info(
-        self, address: str, nickname: Optional[str] = None, email: Optional[str] = None
-    ) -> bool:
+    def update_user_info(self, address: str, nickname: Optional[str] = None) -> bool:
         """
         更新用户信息（可选注册信息）
 
         Args:
             address: 钱包地址
             nickname: 昵称
-            email: 邮箱
 
         Returns:
             是否成功更新
@@ -212,9 +207,6 @@ class UserDB:
         if nickname is not None:
             updates.append("nickname = ?")
             params.append(nickname)
-        if email is not None:
-            updates.append("email = ?")
-            params.append(email)
 
         if not updates:
             conn.close()
@@ -252,7 +244,6 @@ class UserDB:
             {
                 "wallet_address": row["wallet_address"],
                 "nickname": row["nickname"],
-                "email": row["email"],
                 "created_at": row["created_at"],
                 "last_login": row["last_login"],
                 "login_count": row["login_count"],

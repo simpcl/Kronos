@@ -175,7 +175,6 @@ def verify_auth():
                     "wallet_address": user["wallet_address"],
                     "nickname": user["nickname"]
                     or f"User_{address[:8]}...{address[-6:]}",
-                    "email": user["email"],
                     "created_at": user["created_at"],
                     "login_count": user["login_count"],
                 },
@@ -193,8 +192,7 @@ def update_profile():
 
     请求体:
         {
-            "nickname": "用户昵称",
-            "email": "user@example.com"
+            "nickname": "用户昵称"
         }
 
     返回:
@@ -211,10 +209,9 @@ def update_profile():
 
         data = request.get_json()
         nickname = data.get("nickname")
-        email = data.get("email")
 
         db = get_user_db()
-        db.update_user_info(address, nickname=nickname, email=email)
+        db.update_user_info(address, nickname=nickname)
 
         user = db.get_user_by_address(address)
         if not user:
@@ -227,7 +224,6 @@ def update_profile():
                 "user": {
                     "wallet_address": user["wallet_address"],
                     "nickname": user["nickname"],
-                    "email": user["email"],
                 },
             }
         )
@@ -274,7 +270,6 @@ def auth_status():
                         "wallet_address": user["wallet_address"],
                         "nickname": user["nickname"]
                         or f"User_{address[:8]}...{address[-6:]}",
-                        "email": user["email"],
                         "created_at": user["created_at"],
                         "login_count": user["login_count"],
                     },
