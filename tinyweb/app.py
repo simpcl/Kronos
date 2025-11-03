@@ -11,7 +11,7 @@ import sys
 import warnings
 import datetime
 import secrets
-from utils.auth_routes import require_auth
+from utils.auth_routes import require_auth, require_admin_auth
 
 warnings.filterwarnings("ignore")
 
@@ -21,36 +21,16 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Import authentication modules
 from utils.auth_routes import auth_bp
 
+
 try:
     from model import Kronos, KronosTokenizer, KronosPredictor
 
     MODEL_AVAILABLE = True
 except ImportError:
     MODEL_AVAILABLE = False
-    print(
-        "Warning: Kronos model cannot be imported, will use simulated data for demonstration"
+    sys.exit(
+        "Error: Kronos model cannot be imported, will use simulated data for demonstration"
     )
-
-app = Flask(__name__)
-CORS(app)
-
-# Session configuration for authentication
-app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
-app.config["SESSION_COOKIE_HTTPONLY"] = True
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-
-# Register authentication blueprint
-app.register_blueprint(auth_bp)
-
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-ALLOWED_EXTENSIONS = {"csv", "feather"}
-app.config["DATA_DIR"] = DATA_DIR
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
-
-# Global variables to store models
-tokenizer = None
-model = None
-predictor = None
 
 # Available model configurations
 AVAILABLE_MODELS = {
@@ -80,13 +60,66 @@ AVAILABLE_MODELS = {
     },
 }
 
+# Global variables to store models
+tokenizer = None
+model = None
+predictor = None
+current_model_key = None
+
+
+def _load_model(model_key="kronos-base", device="cpu"):
+    """Load Kronos model"""
+    global tokenizer, model, predictor, current_model_key
+
+    if not MODEL_AVAILABLE:
+        raise Exception("Kronos model library not available")
+
+    if model_key not in AVAILABLE_MODELS:
+        raise Exception(f"Unsupported model: {model_key}")
+
+    model_config = AVAILABLE_MODELS[model_key]
+    current_model_key = model_key
+
+    # Load tokenizer and model
+    tokenizer = KronosTokenizer.from_pretrained(model_config["tokenizer_id"])
+    model = Kronos.from_pretrained(model_config["model_id"])
+
+    # Create predictor
+    predictor = KronosPredictor(
+        model, tokenizer, device=device, max_context=model_config["context_length"]
+    )
+    return model_config
+
+
+try:
+    _load_model()
+except Exception as e:
+    sys.exit(f"Error: Model loading failed: {str(e)}")
+
+
+app = Flask(__name__)
+CORS(app)
+
+# Session configuration for authentication
+app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
+app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+
+# Register authentication blueprint
+app.register_blueprint(auth_bp)
+
+DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+ALLOWED_EXTENSIONS = {"csv", "feather"}
+app.config["DATA_DIR"] = DATA_DIR
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
+
 
 def allowed_file(filename):
     """Check if file extension is allowed"""
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def load_data_files():
+def _get_data_files():
     """Scan data directory and return available data files"""
     data_dir = app.config["DATA_DIR"]
     data_files = []
@@ -447,7 +480,8 @@ def index():
 @app.route("/api/data-files")
 def get_data_files():
     """Get available data file list"""
-    data_files = load_data_files()
+    data_files = _get_data_files()
+
     return jsonify(data_files)
 
 
@@ -865,7 +899,7 @@ def predict():
 
 
 @app.route("/api/load-model", methods=["POST"])
-@require_auth
+@require_admin_auth
 def load_model():
     """Load Kronos model"""
     global tokenizer, model, predictor
@@ -878,19 +912,7 @@ def load_model():
         model_key = data.get("model_key", "kronos-small")
         device = data.get("device", "cpu")
 
-        if model_key not in AVAILABLE_MODELS:
-            return jsonify({"error": f"Unsupported model: {model_key}"}), 400
-
-        model_config = AVAILABLE_MODELS[model_key]
-
-        # Load tokenizer and model
-        tokenizer = KronosTokenizer.from_pretrained(model_config["tokenizer_id"])
-        model = Kronos.from_pretrained(model_config["model_id"])
-
-        # Create predictor
-        predictor = KronosPredictor(
-            model, tokenizer, device=device, max_context=model_config["context_length"]
-        )
+        model_config = _load_model(model_key, device)
 
         return jsonify(
             {
@@ -927,6 +949,7 @@ def get_model_status():
                     "message": "Kronos model loaded and available",
                     "current_model": {
                         "name": predictor.model.__class__.__name__,
+                        "key": current_model_key if current_model_key else "",
                         "device": str(next(predictor.model.parameters()).device),
                     },
                 }
@@ -947,6 +970,128 @@ def get_model_status():
                 "message": "Kronos model library not available, please install related dependencies",
             }
         )
+
+
+@app.route("/api/all-in-one-predict", methods=["POST"])
+# @require_auth
+def all_in_one_predict():
+    """Predict all in one"""
+    try:
+        data = request.get_json()
+        file_path = data.get("file_path")
+        lookback = int(data.get("lookback", 400))
+        pred_len = int(data.get("pred_len", 120))
+
+        # Get prediction quality parameters
+        temperature = float(data.get("temperature", 1.0))
+        top_p = float(data.get("top_p", 0.9))
+        sample_count = int(data.get("sample_count", 1))
+
+        if not file_path:
+            return jsonify({"error": "File path cannot be empty"}), 400
+
+        # Load data
+        df, error = load_data_file(file_path)
+        if error:
+            return jsonify({"error": error}), 400
+
+        if len(df) < lookback:
+            return (
+                jsonify(
+                    {
+                        "error": f"Insufficient data length, need at least {lookback} rows"
+                    }
+                ),
+                400,
+            )
+
+        # Perform prediction
+        try:
+            # Use real Kronos model
+            # Only use necessary columns: OHLCV, excluding amount
+            required_cols = ["open", "high", "low", "close"]
+            if "volume" in df.columns:
+                required_cols.append("volume")
+
+            # Process time period selection
+            start_date = data.get("start_date")
+
+            if start_date:
+                # Custom time period - fix logic: use data within selected window
+                start_dt = pd.to_datetime(start_date)
+
+                # Find data after start time
+                mask = df["timestamps"] >= start_dt
+                time_range_df = df[mask]
+
+                # Ensure sufficient data: lookback + pred_len
+                if len(time_range_df) < lookback + pred_len:
+                    return (
+                        jsonify(
+                            {
+                                "error": f'Insufficient data from start time {start_dt.strftime("%Y-%m-%d %H:%M")}, need at least {lookback + pred_len} data points, currently only {len(time_range_df)} available'
+                            }
+                        ),
+                        400,
+                    )
+
+                # Use first lookback data points within selected window for prediction
+                x_df = time_range_df.iloc[:lookback][required_cols]
+                x_timestamp = time_range_df.iloc[:lookback]["timestamps"]
+
+                # Use last pred_len data points within selected window as actual values
+                y_timestamp = time_range_df.iloc[lookback : lookback + pred_len][
+                    "timestamps"
+                ]
+
+                # Calculate actual time period length
+                start_timestamp = time_range_df["timestamps"].iloc[0]
+                end_timestamp = time_range_df["timestamps"].iloc[
+                    lookback + pred_len - 1
+                ]
+                time_span = end_timestamp - start_timestamp
+
+                prediction_type = f"Kronos model prediction (within selected window: first {lookback} data points for prediction, last {pred_len} data points for comparison, time span: {time_span})"
+            else:
+                # Use latest data
+                x_df = df.iloc[:lookback][required_cols]
+                x_timestamp = df.iloc[:lookback]["timestamps"]
+                y_timestamp = df.iloc[lookback : lookback + pred_len]["timestamps"]
+                prediction_type = "Kronos model prediction (latest data)"
+
+            # Ensure timestamps are Series format, not DatetimeIndex, to avoid .dt attribute error in Kronos model
+            if isinstance(x_timestamp, pd.DatetimeIndex):
+                x_timestamp = pd.Series(x_timestamp, name="timestamps")
+            if isinstance(y_timestamp, pd.DatetimeIndex):
+                y_timestamp = pd.Series(y_timestamp, name="timestamps")
+
+            pred_df = predictor.predict(
+                df=x_df,
+                x_timestamp=x_timestamp,
+                y_timestamp=y_timestamp,
+                pred_len=pred_len,
+                T=temperature,
+                top_p=top_p,
+                sample_count=sample_count,
+            )
+            # pred_df.to_csv(f"{file_path}_pred.csv", index=False)
+            pred_df.to_json(f"{file_path}_pred.json", orient="records")
+
+        except Exception as e:
+            return (
+                jsonify({"error": f"Kronos model prediction failed: {str(e)}"}),
+                500,
+            )
+
+        return jsonify(
+            {
+                "success": True,
+                "prediction_type": prediction_type,
+                "prediction_results": f"{file_path}_pred.json",
+            }
+        )
+    except Exception as e:
+        return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
 
 
 if __name__ == "__main__":

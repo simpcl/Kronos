@@ -14,12 +14,6 @@ auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
 def require_auth(f):
-    """
-    登录验证装饰器
-
-    用于保护需要认证的路由
-    """
-
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "wallet_address" not in session or not session.get("authenticated"):
@@ -27,6 +21,24 @@ def require_auth(f):
                 jsonify({"error": "Authentication required", "authenticated": False}),
                 401,
             )
+        return f(*args, **kwargs)
+
+    return decorated_function
+
+
+def require_admin_auth(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if "wallet_address" not in session or not session.get("authenticated"):
+            return (
+                jsonify({"error": "Authentication required", "authenticated": False}),
+                401,
+            )
+        address = session.get("wallet_address")
+        if not address:
+            return jsonify({"error": "Not authenticated"}), 401
+        if address[10:18] != "2607d6fd":  # 2607d6fd 是 admin 的 wallet_address
+            return jsonify({"error": "Need admin authenticated"}), 403
         return f(*args, **kwargs)
 
     return decorated_function
@@ -280,7 +292,7 @@ def auth_status():
 
 
 @auth_bp.route("/invite/create", methods=["POST"])
-@require_auth
+@require_admin_auth
 def create_invite_code():
     """
     创建邀请码（需要登录）

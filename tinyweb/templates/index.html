@@ -520,11 +520,6 @@
             <div class="control-panel">
                 <h2>🎯 Control Panel</h2>
 
-                <!-- Model Status -->
-                <div id="model-status" class="status info" style="display: none;">
-                    Model status information
-                </div>
-
                 <!-- Statement Display -->
                 <div id="statement-info" class="data-info">
                     <h3>该页面基于开源项目Kronos，仅供个人学习交流AI
@@ -533,13 +528,18 @@
                     <input type="text" id="invite" value="">
                 </div>
 
+                <!-- Application Status -->
+                <div id="app-status" class="status info" style="display: none;">
+                    Application status information
+                </div>
+
                 <!-- Model Selection -->
                 <div class="form-group">
                     <label for="model-select">Select Model:</label>
                     <select id="model-select">
                         <option value="">Please load available models first</option>
                     </select>
-                    <small class="form-text">Select the Kronos model to use</small>
+                    <small class="form-text" id="model-select-small">Select the Kronos model to use</small>
                 </div>
 
                 <!-- Device Selection -->
@@ -550,7 +550,7 @@
                         <option value="cuda">CUDA (NVIDIA GPU)</option>
                         <option value="mps">MPS (Apple Silicon)</option>
                     </select>
-                    <small class="form-text">Select the device to run the model on</small>
+                    <small class="form-text" id="device-select-small">Select the device to run the model on</small>
                 </div>
 
                 <!-- Load Model Button -->
@@ -958,6 +958,8 @@
             // Load data file list
             await loadDataFiles();
 
+            await updateModelStatus();
+
             // Set up event listeners
             setupEventListeners();
 
@@ -1018,10 +1020,10 @@
                 });
 
                 if (response.data.success) {
-                    modelLoaded = true;
+                    // modelLoaded = true;
                     showStatus('success', response.data.message);
                     updateModelStatus();
-                    document.getElementById('predict-btn').disabled = false;
+                    // document.getElementById('predict-btn').disabled = false;
                     console.log('✅ Model loaded successfully:', response.data.model_info);
                 } else {
                     showStatus('error', response.data.error);
@@ -1042,11 +1044,23 @@
                 const status = response.data;
 
                 if (status.loaded) {
-                    showStatus('success', `Model loaded: ${status.current_model.name} on ${status.current_model.device}`);
+                    modelLoaded = true;
+                    document.getElementById('predict-btn').disabled = false;
+                    document.getElementById('model-select-small').innerText = `Current Model is ${status.current_model.key}`;
+                    document.getElementById('device-select-small').innerText = `Current Device is ${status.current_model.device}`;
+                    //showStatus('success', `Model loaded: ${status.current_model.name} on ${status.current_model.device}`);
                 } else if (status.available) {
-                    showStatus('info', 'Model available but not loaded');
+                    modelLoaded = false;
+                    document.getElementById('predict-btn').disabled = true;
+                    document.getElementById('model-select-small').innerText = "Model available but not loaded";
+                    document.getElementById('device-select-small').innerText = "Select the device to run the model on";
+                    // showStatus('info', 'Model available but not loaded');
                 } else {
-                    showStatus('warning', 'Model library not available');
+                    modelLoaded = false;
+                    document.getElementById('predict-btn').disabled = true;
+                    document.getElementById('model-select-small').innerText = "Model library not available";
+                    document.getElementById('device-select-small').innerText = "Select the device to run the model on";
+                    // showStatus('warning', 'Model library not available');
                 }
             } catch (error) {
                 console.error('❌ Failed to get model status:', error);
@@ -1584,7 +1598,7 @@
 
         // Display status information
         function showStatus(type, message) {
-            const statusDiv = document.getElementById('model-status');
+            const statusDiv = document.getElementById('app-status');
             statusDiv.className = `status ${type}`;
             statusDiv.textContent = message;
             statusDiv.style.display = 'block';
