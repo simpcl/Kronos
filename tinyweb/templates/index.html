@@ -47,6 +47,42 @@
             min-width: 250px;
         }
 
+        /* Wallet invite code input styles */
+        .wallet-input-group {
+            margin: 10px 0;
+        }
+
+        .wallet-input-label {
+            display: block;
+            color: white;
+            font-size: 14px;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        .wallet-input {
+            width: 100%;
+            padding: 8px 12px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            font-size: 14px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .wallet-input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+
+        .wallet-input:focus {
+            outline: none;
+            border-color: rgba(255, 255, 255, 0.6);
+            background: rgba(255, 255, 255, 0.15);
+            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        }
+
         .wallet-card p {
             margin: 8px 0;
             font-size: 14px;
@@ -499,7 +535,19 @@
             <button id="connect-wallet-btn" class="btn btn-primary">
                 🔐 连接钱包
             </button>
+            <div id="wallet-login-section" style="display: none; margin-top: 10px;">
+                <p style="color: white; font-size: 14px; margin-bottom: 10px;">
+                    钱包已连接: <span id="connected-address" style="font-family: monospace;">-</span>
+                </p>
+                <div class="wallet-input-group">
+                    <input type="text" id="wallet-invite" class="wallet-input" placeholder="邀请码（新用户需要）">
+                </div>
+                <button id="login-btn" class="btn btn-success">
+                    🔑 登录服务端
+                </button>
+            </div>
         </div>
+
         <div id="wallet-info-section">
             <div class="wallet-card">
                 <p><strong>钱包地址:</strong></p>
@@ -523,9 +571,7 @@
                 <!-- Statement Display -->
                 <div id="statement-info" class="data-info">
                     <h3>该页面基于开源项目Kronos，仅供个人学习交流AI
-                        Agent在金融领域的应用，不得用于商业用途。连接Web3钱包相当于登录，连接后可进行数据分析和预测，第一次连接钱包需要输入邀请码，页面服务端只会获取到钱包地址信息</h3>
-                    <label for="invite">邀请码:</label>
-                    <input type="text" id="invite" value="">
+                        Agent在金融领域的应用，不得用于商业用途。连接Web3钱包后可进行登录，第一次登录需要输入邀请码，服务端只会获取到钱包地址信息</h3>
                 </div>
 
                 <!-- Application Status -->
@@ -722,6 +768,8 @@
         let provider = null;
         let signer = null;
         let currentAddress = null;
+        let walletConnected = false; // 新增：标记钱包是否已本地连接
+        let isLoggedIn = false; // 新增：标记是否已登录服务端
 
         // Initialize after page loads
         document.addEventListener('DOMContentLoaded', function () {
@@ -803,6 +851,7 @@
 
             // Set up wallet event listeners
             document.getElementById('connect-wallet-btn')?.addEventListener('click', connectWallet);
+            document.getElementById('login-btn')?.addEventListener('click', loginToServer);
             document.getElementById('logout-btn')?.addEventListener('click', logout);
         }
 
@@ -812,6 +861,8 @@
                 const response = await axios.get('/api/auth/status');
                 if (response.data.authenticated) {
                     currentAddress = response.data.user.wallet_address;
+                    walletConnected = true;
+                    isLoggedIn = true;
                     showWalletInfo(response.data.user);
                 } else {
                     showWalletConnect();
@@ -822,7 +873,7 @@
             }
         }
 
-        // Connect wallet
+        // Connect wallet - 仅本地连接Web3钱包
         async function connectWallet() {
             try {
                 // 检查 ethers 是否已加载（兼容 v5 和 v6）
@@ -868,6 +919,31 @@
                 }
                 currentAddress = await signer.getAddress();
 
+                // 标记钱包已连接
+                walletConnected = true;
+
+                // 显示钱包已连接界面
+                showWalletConnected();
+                showStatus('success', '钱包连接成功！请点击"登录服务端"完成身份验证');
+
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                if (error.code === 4001) {
+                    showStatus('error', '用户拒绝了连接请求');
+                } else {
+                    showStatus('error', '连接失败: ' + (error.message || error));
+                }
+            }
+        }
+
+        // 登录服务端 - 完成挑战签名
+        async function loginToServer() {
+            if (!walletConnected || !currentAddress) {
+                showStatus('error', '请先连接钱包');
+                return;
+            }
+
+            try {
                 // Get challenge message
                 const challengeResponse = await axios.post('/api/auth/challenge', {
                     wallet_address: currentAddress
@@ -878,29 +954,34 @@
                 // Request signature
                 const signature = await signer.signMessage(message);
 
+                // Get invite code
+                const inviteCode = document.getElementById('wallet-invite').value.trim();
+
                 // Verify signature
                 const verifyResponse = await axios.post('/api/auth/verify', {
                     wallet_address: currentAddress,
                     signature: signature,
-                    message: message
+                    message: message,
+                    invite_code: inviteCode
                 });
 
                 if (verifyResponse.data.success) {
+                    isLoggedIn = true;
                     if (verifyResponse.data.is_new_user) {
                         showStatus('success', '🎉 欢迎新用户！钱包地址已自动注册');
                     } else {
                         showStatus('success', '登录成功！');
                     }
                     showWalletInfo(verifyResponse.data.user);
+                    await loadDataFiles();
                 }
 
-                await loadDataFiles();
             } catch (error) {
-                console.error('Wallet connection failed:', error);
+                console.error('Server login failed:', error);
                 if (error.code === 4001) {
                     showStatus('error', '用户拒绝了签名请求');
                 } else {
-                    showStatus('error', '连接失败: ' + (error.response?.data?.error || error.message));
+                    showStatus('error', '登录失败: ' + (error.response?.data?.error || error.message));
                 }
             }
         }
@@ -914,19 +995,45 @@
             document.getElementById('user-nickname').textContent = user.nickname || '未设置';
         }
 
+        // Show wallet connected status (local connection only)
+        function showWalletConnected() {
+            document.getElementById('connect-wallet-btn').style.display = 'none';
+            document.getElementById('wallet-login-section').style.display = 'block';
+            document.getElementById('connected-address').textContent =
+                `${currentAddress.substring(0, 6)}...${currentAddress.substring(38)}`;
+        }
+
         // Show connect button
         function showWalletConnect() {
+            const connectBtn = document.getElementById('connect-wallet-btn');
+            connectBtn.style.display = 'block';
+            connectBtn.textContent = '🔐 连接钱包';
             document.getElementById('wallet-connect-section').style.display = 'block';
+            document.getElementById('wallet-login-section').style.display = 'none';
             document.getElementById('wallet-info-section').style.display = 'none';
         }
 
         // Logout
         async function logout() {
             try {
-                await axios.post('/api/auth/logout');
+                // 如果已登录服务端，先退出服务端
+                if (isLoggedIn) {
+                    await axios.post('/api/auth/logout');
+                }
+
+                // 重置所有状态
                 currentAddress = null;
                 provider = null;
                 signer = null;
+                walletConnected = false;
+                isLoggedIn = false;
+
+                // 清空邀请码输入框
+                const inviteInput = document.getElementById('wallet-invite');
+                if (inviteInput) {
+                    inviteInput.value = '';
+                }
+
                 showWalletConnect();
                 await loadDataFiles();
                 showStatus('success', '已登出');
