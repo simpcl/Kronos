@@ -110,7 +110,8 @@ app.register_blueprint(auth_bp)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 ALLOWED_EXTENSIONS = {"csv", "feather"}
-MAX_UPLOAD_FILES = 10  # Maximum files per user
+MAX_UPLOAD_FILES = 3  # Maximum upload files per user
+MAX_RESULT_FILES = 3  # Maximum result files per user
 app.config["DATA_DIR"] = DATA_DIR
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
 
@@ -128,7 +129,7 @@ def _get_user_data_dir(wallet_address):
     return user_dir
 
 
-def _cleanup_old_files(user_dir, max_files=MAX_UPLOAD_FILES):
+def _cleanup_old_files(user_dir, suffixes, max_files=MAX_UPLOAD_FILES):
     """Clean up oldest files if exceed maximum limit"""
     if not os.path.exists(user_dir):
         return
@@ -136,7 +137,7 @@ def _cleanup_old_files(user_dir, max_files=MAX_UPLOAD_FILES):
     # Get all data files in user directory
     files = []
     for file in os.listdir(user_dir):
-        if file.endswith((".csv", ".feather")):
+        if file.endswith(suffixes):
             file_path = os.path.join(user_dir, file)
             file_stat = os.stat(file_path)
             files.append({
@@ -588,7 +589,7 @@ def upload_data():
             return jsonify({"error": "Failed to save file"}), 500
 
         # Clean up old files if exceed maximum limit
-        removed_count = _cleanup_old_files(user_upload_folder, MAX_UPLOAD_FILES)
+        removed_count = _cleanup_old_files(user_upload_folder, (".csv", ".feather"), MAX_UPLOAD_FILES)
 
         # Get file size
         file_size = os.path.getsize(file_path)
@@ -701,6 +702,10 @@ def load_data():
 @require_auth
 def predict():
     """Perform prediction"""
+    wallet_address = session.get("wallet_address")
+    if wallet_address is None or wallet_address == "":
+        return jsonify({"error": "Invalid auth"}), 401
+    results_dir = _get_user_data_dir(wallet_address)
     try:
         data = request.get_json()
         file_path = data.get("file_path")
@@ -800,8 +805,6 @@ def predict():
                     top_p=top_p,
                     sample_count=sample_count,
                 )
-
-                pred_df.to_json(f"{file_path}_pred.json", orient="records")
 
             except Exception as e:
                 return (
@@ -925,11 +928,6 @@ def predict():
 
         # Save prediction results to file
         try:
-            wallet_address = session.get("wallet_address")
-            if wallet_address is None or wallet_address == "":
-                raise Exception("Wallet address not found")
-            results_dir = _get_user_data_dir(wallet_address)
-
             save_prediction_results(
                 results_dir=results_dir,
                 file_path=file_path,
@@ -946,6 +944,7 @@ def predict():
                     "start_date": start_date if start_date else "latest",
                 },
             )
+            _cleanup_old_files(results_dir, (".json"), MAX_RESULT_FILES)
         except Exception as e:
             print(f"Failed to save prediction results: {e}")
 
@@ -1048,6 +1047,10 @@ def get_model_status():
 # @require_auth
 def all_in_one_predict():
     """Predict all in one"""
+    wallet_address = session.get("wallet_address")
+    if wallet_address is None or wallet_address == "":
+        return jsonify({"error": "Invalid auth"}), 401
+    results_dir = _get_user_data_dir(wallet_address)
     try:
         data = request.get_json()
         file_path = data.get("file_path")
@@ -1146,8 +1149,12 @@ def all_in_one_predict():
                 top_p=top_p,
                 sample_count=sample_count,
             )
+
+            file_name = os.path.basename(file_path)
+            pred_file_path = os.path.join(results_dir, f"{file_name}_pred.json")
             # pred_df.to_csv(f"{file_path}_pred.csv", index=False)
-            pred_df.to_json(f"{file_path}_pred.json", orient="records")
+            pred_df.to_json(pred_file_path, orient="records")
+            _cleanup_old_files(results_dir, (".json"), MAX_RESULT_FILES)
 
         except Exception as e:
             return (
