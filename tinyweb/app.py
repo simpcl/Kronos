@@ -110,6 +110,7 @@ app.register_blueprint(auth_bp)
 
 DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 ALLOWED_EXTENSIONS = {"csv", "feather"}
+MAX_UPLOAD_FILES = 10  # Maximum files per user
 app.config["DATA_DIR"] = DATA_DIR
 app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
 
@@ -119,9 +120,51 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
-def _get_data_files():
+def _get_user_data_dir(wallet_address):
+    """Get user-specific data directory path"""
+    # Create user directory based on wallet address
+    user_dir = os.path.join(app.config["DATA_DIR"], wallet_address.lower())
+    os.makedirs(user_dir, exist_ok=True)
+    return user_dir
+
+
+def _cleanup_old_files(user_dir, max_files=MAX_UPLOAD_FILES):
+    """Clean up oldest files if exceed maximum limit"""
+    if not os.path.exists(user_dir):
+        return
+
+    # Get all data files in user directory
+    files = []
+    for file in os.listdir(user_dir):
+        if file.endswith((".csv", ".feather")):
+            file_path = os.path.join(user_dir, file)
+            file_stat = os.stat(file_path)
+            files.append({
+                "name": file,
+                "path": file_path,
+                "mtime": file_stat.st_mtime
+            })
+
+    # Sort by modification time (oldest first)
+    files.sort(key=lambda x: x["mtime"])
+
+    # Remove oldest files if exceed limit
+    if len(files) > max_files:
+        files_to_remove = files[:-max_files]  # All except the newest max_files
+        for file_info in files_to_remove:
+            try:
+                os.remove(file_info["path"])
+                print(f"Removed old file: {file_info['name']}")
+            except Exception as e:
+                print(f"Failed to remove old file {file_info['name']}: {e}")
+
+        return len(files_to_remove)
+
+    return 0
+
+
+def _get_data_files(data_dir):
     """Scan data directory and return available data files"""
-    data_dir = app.config["DATA_DIR"]
     data_files = []
 
     if os.path.exists(data_dir):
@@ -195,6 +238,7 @@ def load_data_file(file_path):
 
 
 def save_prediction_results(
+    results_dir,
     file_path,
     prediction_type,
     prediction_results,
@@ -204,12 +248,6 @@ def save_prediction_results(
 ):
     """Save prediction results to file"""
     try:
-        # Create prediction results directory
-        results_dir = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "prediction_results"
-        )
-        os.makedirs(results_dir, exist_ok=True)
-
         # Generate filename
         timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"prediction_{timestamp}.json"
@@ -480,7 +518,18 @@ def index():
 @app.route("/api/data-files")
 def get_data_files():
     """Get available data file list"""
-    data_files = _get_data_files()
+    data_files = []
+
+    data_dir = app.config["DATA_DIR"]
+
+    data_files += _get_data_files(data_dir)
+
+    # Get wallet address from session
+    wallet_address = session.get("wallet_address")
+    if wallet_address and wallet_address != "":
+        # Get files for specific user
+        user_dir = _get_user_data_dir(wallet_address)
+        data_files += _get_data_files(user_dir)
 
     return jsonify(data_files)
 
@@ -490,6 +539,11 @@ def get_data_files():
 def upload_data():
     """Upload CSV or feather data file"""
     try:
+        # Get wallet address from session
+        wallet_address = session.get("wallet_address")
+        if not wallet_address:
+            return jsonify({"error": "Authentication required"}), 401
+
         # Check if file is present in request
         if "file" not in request.files:
             return jsonify({"error": "No file provided"}), 400
@@ -511,13 +565,12 @@ def upload_data():
                 400,
             )
 
-        # Create upload folder if it doesn't exist
-        upload_folder = app.config["DATA_DIR"]
-        os.makedirs(upload_folder, exist_ok=True)
+        # Create user-specific upload folder
+        user_upload_folder = _get_user_data_dir(wallet_address)
 
         # Generate secure filename
         filename = secure_filename(file.filename)
-        file_path = os.path.join(upload_folder, filename)
+        file_path = os.path.join(user_upload_folder, filename)
 
         # Check if file already exists
         if os.path.exists(file_path):
@@ -525,7 +578,7 @@ def upload_data():
             base, ext = os.path.splitext(filename)
             timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"{base}_{timestamp}{ext}"
-            file_path = os.path.join(upload_folder, filename)
+            file_path = os.path.join(user_upload_folder, filename)
 
         # Save file
         file.save(file_path)
@@ -534,13 +587,23 @@ def upload_data():
         if not os.path.exists(file_path):
             return jsonify({"error": "Failed to save file"}), 500
 
+        # Clean up old files if exceed maximum limit
+        removed_count = _cleanup_old_files(user_upload_folder, MAX_UPLOAD_FILES)
+
         # Get file size
         file_size = os.path.getsize(file_path)
+
+        # Build response message
+        message_parts = [f"File uploaded successfully: {filename}"]
+        if removed_count > 0:
+            message_parts.append(f"Removed {removed_count} old file(s) to maintain limit of {MAX_UPLOAD_FILES} files")
+
+        message = ". ".join(message_parts)
 
         return jsonify(
             {
                 "success": True,
-                "message": f"File uploaded successfully: {filename}",
+                "message": message,
                 "file_info": {
                     "name": filename,
                     "path": file_path,
@@ -549,6 +612,7 @@ def upload_data():
                         if file_size < 1024 * 1024
                         else f"{file_size / (1024*1024):.1f} MB"
                     ),
+                    "user_dir": wallet_address.lower(),
                 },
             }
         )
@@ -737,6 +801,8 @@ def predict():
                     sample_count=sample_count,
                 )
 
+                pred_df.to_json(f"{file_path}_pred.json", orient="records")
+
             except Exception as e:
                 return (
                     jsonify({"error": f"Kronos model prediction failed: {str(e)}"}),
@@ -859,7 +925,13 @@ def predict():
 
         # Save prediction results to file
         try:
+            wallet_address = session.get("wallet_address")
+            if wallet_address is None or wallet_address == "":
+                raise Exception("Wallet address not found")
+            results_dir = _get_user_data_dir(wallet_address)
+
             save_prediction_results(
+                results_dir=results_dir,
                 file_path=file_path,
                 prediction_type=prediction_type,
                 prediction_results=prediction_results,
