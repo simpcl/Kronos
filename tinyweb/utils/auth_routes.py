@@ -3,6 +3,7 @@
 定义 Web3 钱包认证相关的 Flask 路由
 """
 
+import os
 from flask import Blueprint, request, jsonify, session
 from functools import wraps
 from .auth import get_wallet_auth
@@ -37,7 +38,8 @@ def require_admin_auth(f):
         address = session.get("wallet_address")
         if not address:
             return jsonify({"error": "Not authenticated"}), 401
-        if address[10:18] != "2607d6fd":  # 2607d6fd 是 admin 的 wallet_address
+        ADMIN_PUBLIC_KEY = os.environ.get("ADMIN_PUBLIC_KEY", "")
+        if address is not ADMIN_PUBLIC_KEY:
             return jsonify({"error": "Need admin authenticated"}), 403
         return f(*args, **kwargs)
 
