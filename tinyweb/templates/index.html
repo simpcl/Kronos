@@ -533,30 +533,15 @@
                     Application status information
                 </div>
 
-                <!-- Model Selection -->
-                <div class="form-group">
-                    <label for="model-select">Select Model:</label>
-                    <select id="model-select">
-                        <option value="">Please load available models first</option>
-                    </select>
-                    <small class="form-text" id="model-select-small">Select the Kronos model to use</small>
-                </div>
+                <hr style="margin: 20px 0; border: 1px solid #e2e8f0;">
 
-                <!-- Device Selection -->
+                <!-- Model Status -->
                 <div class="form-group">
-                    <label for="device-select">Select Device:</label>
-                    <select id="device-select">
-                        <option value="cpu">CPU</option>
-                        <option value="cuda">CUDA (NVIDIA GPU)</option>
-                        <option value="mps">MPS (Apple Silicon)</option>
-                    </select>
-                    <small class="form-text" id="device-select-small">Select the device to run the model on</small>
+                    <label for="model-status">Model Status:</label>
+                    <large class="form-text" id="model-select-small">Select the Kronos model to use</large>
+                    <br>
+                    <large class="form-text" id="device-select-small">Select the device to run the model on</large>
                 </div>
-
-                <!-- Load Model Button -->
-                <button id="load-model-btn" class="btn btn-secondary">
-                    🔄 Load Model
-                </button>
 
                 <hr style="margin: 20px 0; border: 1px solid #e2e8f0;">
 
@@ -908,6 +893,8 @@
                     }
                     showWalletInfo(verifyResponse.data.user);
                 }
+
+                await loadDataFiles();
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 if (error.code === 4001) {
@@ -941,6 +928,7 @@
                 provider = null;
                 signer = null;
                 showWalletConnect();
+                await loadDataFiles();
                 showStatus('success', '已登出');
             } catch (error) {
                 console.error('Logout failed:', error);
@@ -952,13 +940,10 @@
         async function initializeApp() {
             console.log('🚀 Initializing Kronos Web UI...');
 
-            // Load available models
-            await loadAvailableModels();
+            await updateModelStatus();
 
             // Load data file list
             await loadDataFiles();
-
-            await updateModelStatus();
 
             // Set up event listeners
             setupEventListeners();
@@ -969,74 +954,6 @@
             console.log('✅ Application initialization completed');
         }
 
-        // Load available models
-        async function loadAvailableModels() {
-            try {
-                const response = await axios.get('/api/available-models');
-                if (response.data.model_available) {
-                    availableModels = response.data.models;
-                    populateModelSelect();
-                    console.log('✅ Available models loaded successfully:', availableModels);
-                } else {
-                    console.warn('⚠️ Kronos model library not available');
-                    showStatus('warning', 'Kronos model library not available, will use simulated prediction');
-                }
-            } catch (error) {
-                console.error('❌ Failed to load available models:', error);
-                showStatus('error', 'Failed to load available models');
-            }
-        }
-
-        // Populate model selection dropdown
-        function populateModelSelect() {
-            const modelSelect = document.getElementById('model-select');
-            modelSelect.innerHTML = '<option value="">Please select model</option>';
-
-            Object.entries(availableModels).forEach(([key, model]) => {
-                const option = document.createElement('option');
-                option.value = key;
-                option.textContent = `${model.name} (${model.params}) - ${model.description}`;
-                modelSelect.appendChild(option);
-            });
-        }
-
-        // Load model
-        async function loadModel() {
-            const modelKey = document.getElementById('model-select').value;
-            const device = document.getElementById('device-select').value;
-
-            if (!modelKey) {
-                showStatus('error', 'Please select a model to load');
-                return;
-            }
-
-            try {
-                showLoading(true);
-                document.getElementById('load-model-btn').disabled = true;
-
-                const response = await axios.post('/api/load-model', {
-                    model_key: modelKey,
-                    device: device
-                });
-
-                if (response.data.success) {
-                    // modelLoaded = true;
-                    showStatus('success', response.data.message);
-                    updateModelStatus();
-                    // document.getElementById('predict-btn').disabled = false;
-                    console.log('✅ Model loaded successfully:', response.data.model_info);
-                } else {
-                    showStatus('error', response.data.error);
-                }
-            } catch (error) {
-                console.error('❌ Model loading failed:', error);
-                showStatus('error', `Model loading failed: ${error.response?.data?.error || error.message}`);
-            } finally {
-                showLoading(false);
-                document.getElementById('load-model-btn').disabled = false;
-            }
-        }
-
         // Update model status
         async function updateModelStatus() {
             try {
@@ -1045,7 +962,6 @@
 
                 if (status.loaded) {
                     modelLoaded = true;
-                    document.getElementById('predict-btn').disabled = false;
                     document.getElementById('model-select-small').innerText = `Current Model is ${status.current_model.key}`;
                     document.getElementById('device-select-small').innerText = `Current Device is ${status.current_model.device}`;
                     //showStatus('success', `Model loaded: ${status.current_model.name} on ${status.current_model.device}`);
@@ -1405,13 +1321,14 @@
 
         // Start prediction
         async function startPrediction() {
-            if (!currentDataFile) {
-                showStatus('error', 'Please load data file first');
+            if (!modelLoaded) {
+                showStatus('error', 'Kronos model is not available');
+                document.getElementById('predict-btn').disabled = true;
                 return;
             }
 
-            if (!modelLoaded) {
-                showStatus('error', 'Please load model first');
+            if (!currentDataFile) {
+                showStatus('error', 'Please load data file first');
                 return;
             }
 
@@ -1467,7 +1384,6 @@
                 showStatus('error', `Prediction failed: ${error.response?.data?.error || error.message}`);
             } finally {
                 showLoading(false);
-                document.getElementById('predict-btn').disabled = false;
             }
         }
 
@@ -1563,9 +1479,6 @@
 
         // Set up event listeners
         function setupEventListeners() {
-            // Load model button
-            document.getElementById('load-model-btn').addEventListener('click', loadModel);
-
             // File upload trigger button
             document.getElementById('upload-trigger-btn').addEventListener('click', function () {
                 document.getElementById('file-upload').click();

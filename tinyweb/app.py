@@ -60,16 +60,24 @@ AVAILABLE_MODELS = {
     },
 }
 
+
+KRONOS_MODEL_KEY = os.environ.get("KRONOS_MODEL_KEY", "kronos-base")
+KRONOS_MODEL_DEVICE = os.environ.get("KRONOS_MODEL_DEVICE", "cpu")
+# DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
+DATA_DIR = os.environ.get("DATA_DIR", "data")
+DATA_DIR = os.path.abspath(DATA_DIR)
+print(f"DATA_DIR: {DATA_DIR}")
+MAX_UPLOAD_FILES = os.environ.get("MAX_UPLOAD_FILES", 3)  # Maximum upload files per user
+MAX_RESULT_FILES = os.environ.get("MAX_RESULT_FILES", 3)  # Maximum result files per user
+
 # Global variables to store models
 tokenizer = None
 model = None
 predictor = None
-current_model_key = None
 
-
-def _load_model(model_key="kronos-base", device="cpu"):
+def _load_model(model_key=KRONOS_MODEL_KEY, device=KRONOS_MODEL_DEVICE):
     """Load Kronos model"""
-    global tokenizer, model, predictor, current_model_key
+    global tokenizer, model, predictor
 
     if not MODEL_AVAILABLE:
         raise Exception("Kronos model library not available")
@@ -78,7 +86,6 @@ def _load_model(model_key="kronos-base", device="cpu"):
         raise Exception(f"Unsupported model: {model_key}")
 
     model_config = AVAILABLE_MODELS[model_key]
-    current_model_key = model_key
 
     # Load tokenizer and model
     tokenizer = KronosTokenizer.from_pretrained(model_config["tokenizer_id"])
@@ -96,24 +103,18 @@ try:
 except Exception as e:
     sys.exit(f"Error: Model loading failed: {str(e)}")
 
-
+ALLOWED_EXTENSIONS = {"csv", "feather"}
 app = Flask(__name__)
 CORS(app)
 
-# Session configuration for authentication
 app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["DATA_DIR"] = DATA_DIR
+app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
 
 # Register authentication blueprint
 app.register_blueprint(auth_bp)
-
-DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
-ALLOWED_EXTENSIONS = {"csv", "feather"}
-MAX_UPLOAD_FILES = 3  # Maximum upload files per user
-MAX_RESULT_FILES = 3  # Maximum result files per user
-app.config["DATA_DIR"] = DATA_DIR
-app.config["MAX_CONTENT_LENGTH"] = 100 * 1024 * 1024  # Max 100MB
 
 
 def allowed_file(filename):
@@ -1020,7 +1021,7 @@ def get_model_status():
                     "message": "Kronos model loaded and available",
                     "current_model": {
                         "name": predictor.model.__class__.__name__,
-                        "key": current_model_key if current_model_key else "",
+                        "key": KRONOS_MODEL_KEY,
                         "device": str(next(predictor.model.parameters()).device),
                     },
                 }
