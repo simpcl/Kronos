@@ -1158,10 +1158,10 @@ def get_model_status():
         )
 
 
-@app.route("/api/all-in-one-predict", methods=["POST"])
+@app.route("/api/only-predict", methods=["POST"])
 # @require_auth
-def all_in_one_predict():
-    """Predict all in one"""
+def only_predict():
+    """Predict only, not analysis"""
     wallet_address = session.get("wallet_address")
     if wallet_address is None or wallet_address == "":
         return jsonify({"error": "Invalid auth"}), 401

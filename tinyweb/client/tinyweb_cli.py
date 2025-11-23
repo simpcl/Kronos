@@ -31,7 +31,7 @@ Commands:
 
     Predictions:
         predict              Run Kronos model prediction
-        predict-all          Run simplified all-in-one prediction
+        predict-only          Run simplified all-in-one prediction
 
     Model Management:
         list-models          List available models
@@ -500,8 +500,8 @@ class TinyWebCLI:
             return self.handle_error(e)
         return 0
 
-    def cmd_predict_all(self, args):
-        """Run simplified all-in-one prediction."""
+    def cmd_predict_only(self, args):
+        """Run simplified only prediction."""
         try:
             # Check authentication status first
             auth_status = self.client.get_auth_status()
@@ -514,16 +514,16 @@ class TinyWebCLI:
             lookback = args.lookback or 400
             pred_len = args.pred_len or 120
 
-            print(f"🚀 Running all-in-one prediction on {file_path}...")
+            print(f"🚀 Running only prediction on {file_path}...")
 
-            result = self.client.predict_all_in_one(
+            result = self.client.predict_only(
                 file_path=file_path,
                 lookback=lookback,
                 pred_len=pred_len
             )
 
             # If we reach here, prediction was successful (HTTP 200)
-            print("✅ All-in-one prediction completed successfully!")
+            print("✅ The only prediction completed successfully!")
             print(f"Prediction type: {result.get('prediction_type', 'N/A')}")
             print(f"Prediction Result file: {result.get('prediction_result_file', 'N/A')}")
 
@@ -658,7 +658,7 @@ Examples:
         predict_parser.add_argument('--start-date', help='Start date for prediction (ISO format)')
         predict_parser.add_argument('--output', help='Save results to file')
 
-        predict_all_parser = subparsers.add_parser('predict-all', help='Run simplified all-in-one prediction')
+        predict_all_parser = subparsers.add_parser('predict-only', help='Run simplified only prediction')
         predict_all_parser.add_argument('--file', required=True, help='Path to data file')
         predict_all_parser.add_argument('--lookback', type=int, default=400, help='Lookback period (default: 400)')
         predict_all_parser.add_argument('--pred-len', type=int, default=120, help='Prediction length (default: 120)')
@@ -696,7 +696,7 @@ Examples:
             'list-files': self.cmd_list_files,
             'load-data': self.cmd_load_data,
             'predict': self.cmd_predict,
-            'predict-all': self.cmd_predict_all,
+            'predict-only': self.cmd_predict_only,
             'list-models': self.cmd_list_models,
             'model-status': self.cmd_model_status,
             'load-model': self.cmd_load_model,

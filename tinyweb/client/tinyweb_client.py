@@ -419,11 +419,11 @@ class TinyWebClient:
 
         return self._make_request("POST", "/api/predict", json=data)
 
-    def predict_all_in_one(self, file_path: str, lookback: int = 400, pred_len: int = 120,
+    def predict_only(self, file_path: str, lookback: int = 400, pred_len: int = 120,
                           temperature: float = 1.0, top_p: float = 0.9,
                           sample_count: int = 1, start_date: Optional[str] = None) -> Dict[str, Any]:
         """
-        Run simplified all-in-one prediction.
+        Run simplified only prediction.
 
         Args:
             file_path: Path to the data file
@@ -452,7 +452,7 @@ class TinyWebClient:
         if start_date:
             data["start_date"] = start_date
 
-        return self._make_request("POST", "/api/all-in-one-predict", json=data)
+        return self._make_request("POST", "/api/only-predict", json=data)
 
     # Model Management Methods
 
