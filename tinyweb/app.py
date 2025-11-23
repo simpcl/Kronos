@@ -4,7 +4,7 @@ import numpy as np
 import json
 import plotly.graph_objects as go
 import plotly.utils
-from flask import Flask, render_template, request, jsonify, session
+from flask import Flask, render_template, request, jsonify, session, send_file
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import sys
@@ -1300,6 +1300,59 @@ def only_predict():
         )
     except Exception as e:
         return jsonify({"error": f"Prediction failed: {str(e)}"}), 500
+
+
+@app.route("/api/download/<path:file_path>", methods=["GET"])
+@require_auth
+def download_file(file_path):
+    """Download prediction result file"""
+    try:
+        # Get wallet address from session
+        wallet_address = session.get("wallet_address")
+        if not wallet_address:
+            return jsonify({"error": "Authentication required"}), 401
+
+        # Convert the URL path to a safe relative path
+        # The file_path parameter already comes from URL, so we need to ensure it's safe
+        if '..' in file_path or file_path.startswith('/'):
+            return jsonify({"error": "Invalid file path"}), 400
+
+        # Convert relative path to absolute path and check security
+        abs_file_path = _to_absolute_path(file_path)
+        if not abs_file_path:
+            return jsonify({"error": "Invalid file path"}), 400
+
+        # Additional security check: ensure user can access this file
+        if not _is_safe_file_path(file_path, wallet_address):
+            return jsonify({"error": "Access to this file is not allowed"}), 403
+
+        # Check if file exists
+        if not os.path.exists(abs_file_path):
+            return jsonify({"error": "File not found"}), 404
+
+        # Get the filename for download
+        filename = os.path.basename(abs_file_path)
+
+        # Determine content type based on file extension
+        if filename.endswith('.json'):
+            content_type = 'application/json'
+        elif filename.endswith('.csv'):
+            content_type = 'text/csv'
+        elif filename.endswith('.feather'):
+            content_type = 'application/octet-stream'
+        else:
+            content_type = 'application/octet-stream'
+
+        # Send file for download
+        return send_file(
+            abs_file_path,
+            as_attachment=True,
+            download_name=filename,
+            mimetype=content_type
+        )
+
+    except Exception as e:
+        return jsonify({"error": f"Download failed: {str(e)}"}), 500
 
 
 if __name__ == "__main__":

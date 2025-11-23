@@ -551,6 +551,83 @@ class TinyWebClient:
 
         raise PredictionError("Prediction timeout exceeded")
 
+    def download_file(self, file_path: str, save_path: Optional[str] = None) -> str:
+        """
+        Download a file from the server.
+
+        Args:
+            file_path: Relative path of the file to download
+            save_path: Local path to save the file (optional, will use filename if not provided)
+
+        Returns:
+            Path where the file was saved
+
+        Raises:
+            AuthenticationError: If authentication is required
+            FileNotFoundError: If file is not found on server
+            TinyWebError: For other API errors
+        """
+        if not self._authenticated:
+            raise AuthenticationError("Authentication required")
+
+        # Validate file path
+        if not file_path or '..' in file_path or file_path.startswith('/'):
+            raise TinyWebError("Invalid file path")
+
+        url = f"{self.base_url}/api/download/{file_path}"
+
+        try:
+            # Remove the default JSON header for file download
+            headers = self.session.headers.copy()
+            if 'Content-Type' in headers:
+                del headers['Content-Type']
+            if 'Accept' in headers:
+                del headers['Accept']
+
+            response = self.session.get(url, headers=headers, stream=True)
+            response.raise_for_status()
+
+            # Determine save path
+            if save_path is None:
+                filename = os.path.basename(file_path)
+                save_path = filename
+
+            # Create directory if it doesn't exist
+            save_dir = os.path.dirname(save_path)
+            if save_dir:
+                os.makedirs(save_dir, exist_ok=True)
+
+            # Save file
+            with open(save_path, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    f.write(chunk)
+
+            return save_path
+
+        except requests.exceptions.RequestException as e:
+            if hasattr(e, 'response') and e.response is not None:
+                if e.response.status_code == 401:
+                    raise AuthenticationError("Authentication required")
+                elif e.response.status_code == 403:
+                    raise TinyWebError("Access to this file is not allowed")
+                elif e.response.status_code == 404:
+                    raise FileNotFoundError(f"File not found: {file_path}")
+                else:
+                    try:
+                        if e.response.text.strip():
+                            error_data = e.response.json()
+                            if 'error' in error_data:
+                                error_msg = error_data['error']
+                            else:
+                                error_msg = f"Download failed: {e.response.status_code}"
+                        else:
+                            error_msg = f"Download failed: {e.response.status_code}"
+                    except json.JSONDecodeError:
+                        error_msg = f"Download failed: {e.response.status_code}"
+                    raise TinyWebError(error_msg)
+            else:
+                raise TinyWebError(f"Download failed: {str(e)}")
+
     def save_results_to_file(self, results: Dict[str, Any], output_path: str) -> None:
         """
         Save prediction results to file.

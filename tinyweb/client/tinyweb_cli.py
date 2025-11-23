@@ -26,8 +26,9 @@ Commands:
 
     Data Management:
         upload               Upload data file (CSV/Feather)
-        list-files           List available data files
+        list-data-files      List available data files
         load-data            Load and analyze data file
+        download             Download prediction result file
 
     Predictions:
         predict              Run Kronos model prediction
@@ -53,6 +54,9 @@ Examples:
 
     # Run prediction
     python3 tinyweb_cli.py predict --file data.csv --lookback 400 --pred-len 120
+
+    # Download prediction result file
+    python3 tinyweb_cli.py download --file-path wallet_address/filename_pred.json --save prediction_result.json
 
     # Create invite code (admin)
     python3 tinyweb_cli.py create-invite --code TEST123 --max-uses 5
@@ -400,7 +404,7 @@ class TinyWebCLI:
             return self.handle_error(e)
         return 0
 
-    def cmd_list_files(self, args):
+    def cmd_list_data_files(self, args):
         """List available data files."""
         try:
             # Check authentication status first
@@ -448,6 +452,41 @@ class TinyWebCLI:
             print(f"Columns: {', '.join(result.get('columns', []))}")
             print(f"Rows: {result.get('rows', 'N/A')}")
             print(f"Date range: {result.get('date_range', 'N/A')}")
+
+        except Exception as e:
+            return self.handle_error(e)
+        return 0
+
+    def cmd_download(self, args):
+        """Download prediction result file."""
+        try:
+            # Check authentication status first
+            auth_status = self.client.get_auth_status()
+            if not auth_status.get("authenticated"):
+                print("❌ Authentication required")
+                print("Please login first using: python3 tinyweb_cli.py login")
+                return 1
+
+            file_path = getattr(args, 'file', None) or input("File path to download: ").strip()
+            save_path = getattr(args, 'save', None) or input("Save as (leave empty to use original name): ").strip() or None
+
+            print(f"📥 Downloading {file_path}...")
+            downloaded_path = self.client.download_file(file_path, save_path)
+
+            # If we reach here, download was successful
+            print(f"✅ File downloaded successfully!")
+            print(f"Saved to: {downloaded_path}")
+
+            # Show file size
+            if os.path.exists(downloaded_path):
+                file_size = os.path.getsize(downloaded_path)
+                if file_size < 1024:
+                    size_str = f"{file_size} bytes"
+                elif file_size < 1024 * 1024:
+                    size_str = f"{file_size / 1024:.1f} KB"
+                else:
+                    size_str = f"{file_size / (1024 * 1024):.1f} MB"
+                print(f"File size: {size_str}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -642,10 +681,15 @@ Examples:
         upload_parser = subparsers.add_parser('upload', help='Upload data file')
         upload_parser.add_argument('--file', required=True, help='Path to data file (CSV/Feather)')
 
-        subparsers.add_parser('list-files', help='List available data files')
+        subparsers.add_parser('list-data-files', help='List available data files')
 
         load_data_parser = subparsers.add_parser('load-data', help='Load and analyze data file')
         load_data_parser.add_argument('--file', required=True, help='Path to data file')
+
+        # Download command
+        download_parser = subparsers.add_parser('download', help='Download prediction result file')
+        download_parser.add_argument('--file', required=True, help='Server file path to download')
+        download_parser.add_argument('--save', help='Local save path (optional, uses original name if not provided)')
 
         # Prediction commands
         predict_parser = subparsers.add_parser('predict', help='Run Kronos model prediction')
@@ -693,8 +737,9 @@ Examples:
             'validate-invite': self.cmd_validate_invite,
             'deactivate-invite': self.cmd_deactivate_invite,
             'upload': self.cmd_upload,
-            'list-files': self.cmd_list_files,
+            'list-data-files': self.cmd_list_data_files,
             'load-data': self.cmd_load_data,
+            'download': self.cmd_download,
             'predict': self.cmd_predict,
             'predict-only': self.cmd_predict_only,
             'list-models': self.cmd_list_models,
