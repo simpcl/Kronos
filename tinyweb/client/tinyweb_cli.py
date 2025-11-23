@@ -191,13 +191,14 @@ class TinyWebCLI:
                 wallet_address, private_key, invite_code
             )
 
-            if result.get("success"):
-                print("✅ Login successful!")
-                user_info = result.get("user", {})
+            # If we reach here, HTTP request was successful (status 200)
+            # The client._make_request already handled HTTP errors
+            print("✅ Login successful!")
+            user_info = result.get("user", {})
+            if user_info:
                 print(f"Welcome, {user_info.get('nickname', wallet_address)}!")
             else:
-                print(f"❌ Login failed: {result.get('error', 'Unknown error')}")
-                return 1
+                print(f"Welcome, {wallet_address}!")
 
         except Exception as e:
             return self.handle_error(e)
@@ -208,6 +209,7 @@ class TinyWebCLI:
         try:
             result = self.client.get_auth_status()
 
+            # Check authentication status from response data
             if result.get("authenticated"):
                 user = result.get("user", {})
                 print("✅ Authenticated")
@@ -226,11 +228,8 @@ class TinyWebCLI:
         """Logout current user."""
         try:
             result = self.client.logout()
-            if result.get("success"):
-                print("✅ Logged out successfully")
-            else:
-                print(f"❌ Logout failed: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, logout was successful (HTTP 200)
+            print("✅ Logged out successfully")
 
         except Exception as e:
             return self.handle_error(e)
@@ -242,12 +241,9 @@ class TinyWebCLI:
             nickname = args.nickname or input("New nickname: ").strip()
             result = self.client.update_profile(nickname)
 
-            if result.get("success"):
-                print(f"✅ Profile updated successfully")
-                print(f"Nickname: {nickname}")
-            else:
-                print(f"❌ Profile update failed: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, profile update was successful (HTTP 200)
+            print(f"✅ Profile updated successfully")
+            print(f"Nickname: {nickname}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -263,12 +259,9 @@ class TinyWebCLI:
 
             result = self.client.create_invite_code(code, max_uses)
 
-            if result.get("success"):
-                print(f"✅ Invite code '{code}' created successfully")
-                print(f"Max uses: {max_uses}")
-            else:
-                print(f"❌ Failed to create invite code: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, invite code creation was successful (HTTP 200)
+            print(f"✅ Invite code '{code}' created successfully")
+            print(f"Max uses: {max_uses}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -279,22 +272,19 @@ class TinyWebCLI:
         try:
             result = self.client.list_invite_codes()
 
-            if result.get("success"):
-                invites = result.get("invite_codes", [])
-                if invites:
-                    print("📋 Invite Codes:")
-                    print("-" * 80)
-                    for invite in invites:
-                        print(f"Code: {invite.get('code', 'N/A')}")
-                        print(f"Max uses: {invite.get('max_uses', 'N/A')}")
-                        print(f"Used: {invite.get('used_count', 0)}")
-                        print(f"Active: {invite.get('active', 'N/A')}")
-                        print("-" * 40)
-                else:
-                    print("No invite codes found")
+            # If we reach here, request was successful (HTTP 200)
+            invites = result.get("invite_codes", [])
+            if invites:
+                print("📋 Invite Codes:")
+                print("-" * 80)
+                for invite in invites:
+                    print(f"Code: {invite.get('code', 'N/A')}")
+                    print(f"Max uses: {invite.get('max_uses', 'N/A')}")
+                    print(f"Used: {invite.get('used_count', 0)}")
+                    print(f"Active: {invite.get('active', 'N/A')}")
+                    print("-" * 40)
             else:
-                print(f"❌ Failed to list invite codes: {result.get('error', 'Unknown error')}")
-                return 1
+                print("No invite codes found")
 
         except Exception as e:
             return self.handle_error(e)
@@ -306,11 +296,14 @@ class TinyWebCLI:
             code = args.code or input("Invite code to validate: ").strip()
             result = self.client.validate_invite_code(code)
 
+            # Check if the invite code is valid based on response data
             if result.get("valid"):
                 print(f"✅ Invite code '{code}' is valid")
                 print(f"Remaining uses: {result.get('remaining_uses', 'N/A')}")
             else:
-                print(f"❌ Invite code '{code}' is invalid: {result.get('error', 'Unknown error')}")
+                print(f"❌ Invite code '{code}' is invalid")
+                if result.get("error"):
+                    print(f"Reason: {result.get('error')}")
                 return 1
 
         except Exception as e:
@@ -323,11 +316,8 @@ class TinyWebCLI:
             code = args.code or input("Invite code to deactivate: ").strip()
             result = self.client.deactivate_invite_code(code)
 
-            if result.get("success"):
-                print(f"✅ Invite code '{code}' deactivated successfully")
-            else:
-                print(f"❌ Failed to deactivate invite code: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, deactivation was successful (HTTP 200)
+            print(f"✅ Invite code '{code}' deactivated successfully")
 
         except Exception as e:
             return self.handle_error(e)
@@ -347,13 +337,10 @@ class TinyWebCLI:
             print(f"📤 Uploading {file_path}...")
             result = self.client.upload_data_file(file_path)
 
-            if result.get("success"):
-                print("✅ File uploaded successfully!")
-                print(f"File path: {result.get('file_path', 'N/A')}")
-                print(f"File size: {result.get('file_size', 'N/A')} bytes")
-            else:
-                print(f"❌ Upload failed: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, upload was successful (HTTP 200)
+            print("✅ File uploaded successfully!")
+            print(f"File path: {result.get('file_path', 'N/A')}")
+            print(f"File size: {result.get('file_size', 'N/A')} bytes")
 
         except Exception as e:
             return self.handle_error(e)
@@ -388,14 +375,11 @@ class TinyWebCLI:
             print(f"📊 Loading data file {file_path}...")
             result = self.client.load_data_file(file_path)
 
-            if result.get("success"):
-                print("✅ Data file loaded successfully!")
-                print(f"Columns: {', '.join(result.get('columns', []))}")
-                print(f"Rows: {result.get('rows', 'N/A')}")
-                print(f"Date range: {result.get('date_range', 'N/A')}")
-            else:
-                print(f"❌ Failed to load data file: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, data loading was successful (HTTP 200)
+            print("✅ Data file loaded successfully!")
+            print(f"Columns: {', '.join(result.get('columns', []))}")
+            print(f"Rows: {result.get('rows', 'N/A')}")
+            print(f"Date range: {result.get('date_range', 'N/A')}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -427,18 +411,15 @@ class TinyWebCLI:
                 start_date=start_date
             )
 
-            if result.get("success"):
-                print("✅ Prediction completed successfully!")
-                print(f"Prediction ID: {result.get('prediction_id', 'N/A')}")
-                print(f"Chart data: {len(result.get('chart_data', []))} points")
+            # If we reach here, prediction was successful (HTTP 200)
+            print("✅ Prediction completed successfully!")
+            print(f"Prediction ID: {result.get('prediction_id', 'N/A')}")
+            print(f"Chart data: {len(result.get('chart_data', []))} points")
 
-                # Save results if output file specified
-                if hasattr(args, 'output') and args.output:
-                    self.client.save_results_to_file(result, args.output)
-                    print(f"Results saved to: {args.output}")
-            else:
-                print(f"❌ Prediction failed: {result.get('error', 'Unknown error')}")
-                return 1
+            # Save results if output file specified
+            if hasattr(args, 'output') and args.output:
+                self.client.save_results_to_file(result, args.output)
+                print(f"Results saved to: {args.output}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -459,12 +440,9 @@ class TinyWebCLI:
                 pred_len=pred_len
             )
 
-            if result.get("success"):
-                print("✅ All-in-one prediction completed successfully!")
-                print(f"Results file: {result.get('results_file', 'N/A')}")
-            else:
-                print(f"❌ Prediction failed: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, prediction was successful (HTTP 200)
+            print("✅ All-in-one prediction completed successfully!")
+            print(f"Results file: {result.get('results_file', 'N/A')}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -477,19 +455,16 @@ class TinyWebCLI:
         try:
             result = self.client.get_available_models()
 
-            if result.get("success"):
-                models = result.get("models", {})
-                print("🤖 Available Models:")
-                print("-" * 80)
-                for model_key, model_info in models.items():
-                    print(f"Model: {model_key}")
-                    print(f"Name: {model_info.get('name', 'N/A')}")
-                    print(f"Description: {model_info.get('description', 'N/A')}")
-                    print(f"Loaded: {model_info.get('loaded', 'N/A')}")
-                    print("-" * 40)
-            else:
-                print(f"❌ Failed to list models: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, request was successful (HTTP 200)
+            models = result.get("models", {})
+            print("🤖 Available Models:")
+            print("-" * 80)
+            for model_key, model_info in models.items():
+                print(f"Model: {model_key}")
+                print(f"Name: {model_info.get('name', 'N/A')}")
+                print(f"Description: {model_info.get('description', 'N/A')}")
+                print(f"Loaded: {model_info.get('loaded', 'N/A')}")
+                print("-" * 40)
 
         except Exception as e:
             return self.handle_error(e)
@@ -500,15 +475,12 @@ class TinyWebCLI:
         try:
             result = self.client.get_model_status()
 
-            if result.get("success"):
-                print("📊 Model Status:")
-                print(f"Current model: {result.get('current_model', 'N/A')}")
-                print(f"Device: {result.get('device', 'N/A')}")
-                print(f"Status: {result.get('status', 'N/A')}")
-                print(f"Memory usage: {result.get('memory_usage', 'N/A')}")
-            else:
-                print(f"❌ Failed to get model status: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, request was successful (HTTP 200)
+            print("📊 Model Status:")
+            print(f"Current model: {result.get('current_model', 'N/A')}")
+            print(f"Device: {result.get('device', 'N/A')}")
+            print(f"Status: {result.get('status', 'N/A')}")
+            print(f"Memory usage: {result.get('memory_usage', 'N/A')}")
 
         except Exception as e:
             return self.handle_error(e)
@@ -523,13 +495,10 @@ class TinyWebCLI:
             print(f"🔄 Loading model {model_key} on {device}...")
             result = self.client.load_model(model_key, device)
 
-            if result.get("success"):
-                print(f"✅ Model {model_key} loaded successfully!")
-                print(f"Device: {device}")
-                print(f"Status: {result.get('status', 'N/A')}")
-            else:
-                print(f"❌ Failed to load model: {result.get('error', 'Unknown error')}")
-                return 1
+            # If we reach here, model loading was successful (HTTP 200)
+            print(f"✅ Model {model_key} loaded successfully!")
+            print(f"Device: {device}")
+            print(f"Status: {result.get('status', 'N/A')}")
 
         except Exception as e:
             return self.handle_error(e)
