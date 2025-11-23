@@ -12,6 +12,7 @@ import warnings
 import datetime
 import secrets
 from utils.auth_routes import require_auth, require_admin_auth
+from dotenv import load_dotenv
 
 warnings.filterwarnings("ignore")
 
@@ -60,6 +61,7 @@ AVAILABLE_MODELS = {
     },
 }
 
+load_dotenv()  # 加载 .env 文件中的变量
 
 KRONOS_MODEL_KEY = os.environ.get("KRONOS_MODEL_KEY", "kronos-base")
 KRONOS_MODEL_DEVICE = os.environ.get("KRONOS_MODEL_DEVICE", "cpu")

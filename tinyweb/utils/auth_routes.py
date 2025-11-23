@@ -38,8 +38,10 @@ def require_admin_auth(f):
         address = session.get("wallet_address")
         if not address:
             return jsonify({"error": "Not authenticated"}), 401
-        ADMIN_PUBLIC_KEY = os.environ.get("ADMIN_PUBLIC_KEY", "")
-        if address is not ADMIN_PUBLIC_KEY:
+        ADMIN_WALLET_ADDRESS = os.environ.get("ADMIN_WALLET_ADDRESS", "")
+        if address != ADMIN_WALLET_ADDRESS:
+            print(f"admin wallet address: {ADMIN_WALLET_ADDRESS}")
+            print(f"Not admin: {address}")
             return jsonify({"error": "Need admin authenticated"}), 403
         return f(*args, **kwargs)
 
@@ -316,8 +318,6 @@ def create_invite_code():
         address = session.get("wallet_address")
         if not address:
             return jsonify({"error": "Not authenticated"}), 401
-        if address[10:18] != "2607d6fd":  # 2607d6fd 是 admin 的 wallet_address
-            return jsonify({"error": "Only admin can create invite code"}), 403
 
         data = request.get_json()
         code = data.get("code")
