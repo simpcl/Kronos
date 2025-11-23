@@ -82,6 +82,7 @@ import sys
 from pathlib import Path
 from typing import Optional, Dict, Any
 import getpass
+import pickle
 
 # Try to load dotenv for .env file support
 try:
@@ -103,7 +104,9 @@ class TinyWebCLI:
 
     def __init__(self):
         self.client = None
+        self.session_file = Path.home() / '.tinyweb' / 'session.pkl'
         self.load_config()
+        self.load_session()
 
     def load_config(self):
         """Load configuration from environment variables."""
@@ -134,6 +137,43 @@ class TinyWebCLI:
             self.client = TinyWebClient()
             self.default_wallet = ''
             self.default_private_key = ''
+
+    def load_session(self):
+        """Load session cookies from file if they exist."""
+        try:
+            if self.session_file.exists():
+                with open(self.session_file, 'rb') as f:
+                    session_data = pickle.load(f)
+                    self.client.session.cookies.update(session_data.get('cookies', {}))
+                    self.client._authenticated = session_data.get('authenticated', False)
+                    self.client._wallet_address = session_data.get('wallet_address')
+                    self.client._user_info = session_data.get('user_info')
+        except Exception as e:
+            # If loading session fails, just continue without it
+            print(f"Warning: Failed to load session data: {e}")
+
+    def save_session(self):
+        """Save session cookies to file for persistence."""
+        try:
+            self.session_file.parent.mkdir(parents=True, exist_ok=True)
+            session_data = {
+                'cookies': self.client.session.cookies.get_dict(),
+                'authenticated': self.client._authenticated,
+                'wallet_address': self.client._wallet_address,
+                'user_info': self.client._user_info
+            }
+            with open(self.session_file, 'wb') as f:
+                pickle.dump(session_data, f)
+        except Exception as e:
+            print(f"Warning: Failed to save session data: {e}")
+
+    def clear_session(self):
+        """Clear saved session data."""
+        try:
+            if self.session_file.exists():
+                self.session_file.unlink()
+        except Exception as e:
+            print(f"Warning: Failed to clear session data: {e}")
 
     def cmd_config(self, args):
         """Show current configuration."""
@@ -200,6 +240,10 @@ class TinyWebCLI:
             else:
                 print(f"Welcome, {wallet_address}!")
 
+            # Save session for persistence
+            self.save_session()
+            print("💾 Session saved for future commands")
+
         except Exception as e:
             return self.handle_error(e)
         return 0
@@ -216,6 +260,12 @@ class TinyWebCLI:
                 print(f"Wallet: {user.get('wallet_address', 'N/A')}")
                 print(f"Nickname: {user.get('nickname', 'N/A')}")
                 print(f"Role: {user.get('role', 'user')}")
+
+                # Show session status
+                if self.session_file.exists():
+                    print("💾 Session: Saved (persistent across CLI calls)")
+                else:
+                    print("⚠️  Session: Not saved (current session only)")
             else:
                 print("❌ Not authenticated")
                 print("Please login using: python3 tinyweb_cli.py login")
@@ -230,6 +280,10 @@ class TinyWebCLI:
             result = self.client.logout()
             # If we reach here, logout was successful (HTTP 200)
             print("✅ Logged out successfully")
+
+            # Clear saved session
+            self.clear_session()
+            print("🗑️  Session data cleared")
 
         except Exception as e:
             return self.handle_error(e)
@@ -349,6 +403,13 @@ class TinyWebCLI:
     def cmd_list_files(self, args):
         """List available data files."""
         try:
+            # Check authentication status first
+            auth_status = self.client.get_auth_status()
+            if not auth_status.get("authenticated"):
+                print("❌ Authentication required")
+                print("Please login first using: python3 tinyweb_cli.py login")
+                return 1
+
             files = self.client.get_data_files()
 
             if files:
@@ -370,6 +431,13 @@ class TinyWebCLI:
     def cmd_load_data(self, args):
         """Load and analyze data file."""
         try:
+            # Check authentication status first
+            auth_status = self.client.get_auth_status()
+            if not auth_status.get("authenticated"):
+                print("❌ Authentication required")
+                print("Please login first using: python3 tinyweb_cli.py login")
+                return 1
+
             file_path = args.file or input("File path: ").strip()
 
             print(f"📊 Loading data file {file_path}...")
@@ -390,6 +458,13 @@ class TinyWebCLI:
     def cmd_predict(self, args):
         """Run Kronos model prediction."""
         try:
+            # Check authentication status first
+            auth_status = self.client.get_auth_status()
+            if not auth_status.get("authenticated"):
+                print("❌ Authentication required")
+                print("Please login first using: python3 tinyweb_cli.py login")
+                return 1
+
             file_path = args.file or input("File path: ").strip()
             lookback = args.lookback or 400
             pred_len = args.pred_len or 120
@@ -428,6 +503,13 @@ class TinyWebCLI:
     def cmd_predict_all(self, args):
         """Run simplified all-in-one prediction."""
         try:
+            # Check authentication status first
+            auth_status = self.client.get_auth_status()
+            if not auth_status.get("authenticated"):
+                print("❌ Authentication required")
+                print("Please login first using: python3 tinyweb_cli.py login")
+                return 1
+
             file_path = args.file or input("File path: ").strip()
             lookback = args.lookback or 400
             pred_len = args.pred_len or 120
