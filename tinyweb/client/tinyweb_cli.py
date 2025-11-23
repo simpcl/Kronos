@@ -17,6 +17,7 @@ Commands:
         status               Show authentication status
         logout               Logout current user
         profile              Update user profile
+        generate-wallet      Generate new wallet address and private key
 
     Invite Codes:
         create-invite        Create new invite code (admin only)
@@ -61,6 +62,9 @@ Examples:
     # Create invite code (admin)
     python3 tinyweb_cli.py create-invite --code TEST123 --max-uses 5
 
+    # Generate new wallet
+    python3 tinyweb_cli.py generate-wallet
+
 Environment Variables:
     TINYWEB_API_URL         API base URL (default: http://localhost:7070)
     TINYWEB_API_TIMEOUT     Request timeout in seconds (default: 300)
@@ -87,6 +91,7 @@ from pathlib import Path
 from typing import Optional, Dict, Any
 import getpass
 import pickle
+import secrets
 
 # Try to load dotenv for .env file support
 try:
@@ -94,6 +99,14 @@ try:
     load_dotenv()
 except ImportError:
     pass  # dotenv not available, continue without it
+
+# Try to import wallet generation libraries
+try:
+    from eth_account import Account
+    from web3 import Web3
+except ImportError:
+    print("Warning: Web3 wallet generation libraries not available. "
+          "Please install eth-account and web3 to use wallet generation.")
 
 # Import the TinyWeb client
 try:
@@ -305,6 +318,24 @@ class TinyWebCLI:
 
         except Exception as e:
             return self.handle_error(e)
+        return 0
+
+    def cmd_generate_wallet(self, args):
+        """Generate new wallet address and private key."""
+        try:
+            priv_key_bytes = secrets.token_bytes(32)
+            acct = Account.from_key(priv_key_bytes)
+            # return {
+            #     "address": acct.address,            # 以太坊地址（0x 开头）
+            #     "private_key_hex": acct.key.hex()   # 私钥（hex）
+            # }
+            print(f"✅ Wallet generated successfully")
+            print(f"Wallet Address: {acct.address}")
+            print(f"Private Key: {acct.key.hex()}")
+
+        except Exception as e:
+            print(f"❌ Error generating wallet: {e}")
+            return 1
         return 0
 
     # Invite Code Commands
@@ -634,6 +665,7 @@ class TinyWebCLI:
             epilog="""
 Examples:
   python3 tinyweb_cli.py login --wallet 0x123... --private-key your_key
+  python3 tinyweb_cli.py generate-wallet
   python3 tinyweb_cli.py upload --file data.csv
   python3 tinyweb_cli.py predict --file data.csv --lookback 400 --pred-len 120
   python3 tinyweb_cli.py create-invite --code TEST123 --max-uses 5
@@ -663,6 +695,9 @@ Examples:
 
         profile_parser = subparsers.add_parser('profile', help='Update user profile')
         profile_parser.add_argument('--nickname', help='New nickname')
+
+        # Wallet generation command
+        generate_wallet_parser = subparsers.add_parser('generate-wallet', help='Generate new wallet address and private key')
 
         # Invite code commands
         create_invite_parser = subparsers.add_parser('create-invite', help='Create new invite code (admin only)')
@@ -732,6 +767,7 @@ Examples:
             'status': self.cmd_status,
             'logout': self.cmd_logout,
             'profile': self.cmd_profile,
+            'generate-wallet': self.cmd_generate_wallet,
             'create-invite': self.cmd_create_invite,
             'list-invites': self.cmd_list_invites,
             'validate-invite': self.cmd_validate_invite,
