@@ -119,9 +119,14 @@ class TinyWebClient:
             error_msg = f"Request failed: {str(e)}"
             if hasattr(e, 'response') and e.response is not None:
                 try:
-                    error_data = e.response.json()
-                    if 'error' in error_data:
-                        error_msg = error_data['error']
+                    if e.response.text.strip():
+                        error_data = e.response.json()
+                        if 'error' in error_data:
+                            error_msg = error_data['error']
+                    else:
+                        error_msg = f"{e.response.status_code} {e.response.reason}: Empty response body"
+                except json.JSONDecodeError:
+                    error_msg = f"{e.response.status_code} {e.response.reason}: Failed to decode JSON object: Expecting value: line 1 column 1 (char 0)"
                 except:
                     pass
             raise TinyWebError(error_msg)
@@ -267,14 +272,22 @@ class TinyWebClient:
 
     # Invite Code Management
 
-    def create_invite_code(self) -> Dict[str, Any]:
+    def create_invite_code(self, code: str, max_uses: int = 1) -> Dict[str, Any]:
         """
         Create new invite code (admin only).
+
+        Args:
+            code: Invite code string to create
+            max_uses: Maximum number of uses (0 for unlimited, default: 1)
 
         Returns:
             Created invite code information
         """
-        return self._make_request("POST", "/api/auth/invite/create")
+        data = {
+            "code": code,
+            "max_uses": max_uses
+        }
+        return self._make_request("POST", "/api/auth/invite/create", json=data)
 
     def validate_invite_code(self, invite_code: str) -> Dict[str, Any]:
         """
@@ -623,6 +636,18 @@ if __name__ == "__main__":
         # Get model status
         model_status = client.get_model_status()
         print(f"Model status: {model_status}")
+
+        # Example: create invite code (only works for admin users)
+        try:
+            res = client.create_invite_code("TEST123", 1)
+            print(f"Create invite code result: {res}")
+        except AuthenticationError as e:
+            print(f"Cannot create invite code: {e}")
+        except TinyWebError as e:
+            if "admin" in str(e).lower():
+                print(f"Cannot create invite code: Admin privileges required")
+            else:
+                print(f"Create invite code error: {e}")
 
     except TinyWebError as e:
         print(f"Error: {e}")
