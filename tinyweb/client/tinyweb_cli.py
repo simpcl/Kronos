@@ -524,7 +524,8 @@ class TinyWebCLI:
 
             # If we reach here, prediction was successful (HTTP 200)
             print("✅ All-in-one prediction completed successfully!")
-            print(f"Results file: {result.get('results_file', 'N/A')}")
+            print(f"Prediction type: {result.get('prediction_type', 'N/A')}")
+            print(f"Prediction Result file: {result.get('prediction_result_file', 'N/A')}")
 
         except Exception as e:
             return self.handle_error(e)

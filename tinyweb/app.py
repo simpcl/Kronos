@@ -68,9 +68,13 @@ KRONOS_MODEL_DEVICE = os.environ.get("KRONOS_MODEL_DEVICE", "cpu")
 # DATA_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data")
 DATA_DIR = os.environ.get("DATA_DIR", "data")
 DATA_DIR = os.path.abspath(DATA_DIR)
+MAX_UPLOAD_FILES = int(os.environ.get("MAX_UPLOAD_FILES", "3"))  # Maximum upload files per user
+MAX_RESULT_FILES = int(os.environ.get("MAX_RESULT_FILES", "3"))  # Maximum result files per user
+print(f"KRONOS_MODEL_KEY: {KRONOS_MODEL_KEY}")
+print(f"KRONOS_MODEL_DEVICE: {KRONOS_MODEL_DEVICE}")
 print(f"DATA_DIR: {DATA_DIR}")
-MAX_UPLOAD_FILES = os.environ.get("MAX_UPLOAD_FILES", 3)  # Maximum upload files per user
-MAX_RESULT_FILES = os.environ.get("MAX_RESULT_FILES", 3)  # Maximum result files per user
+print(f"MAX_UPLOAD_FILES: {MAX_UPLOAD_FILES}")
+print(f"MAX_RESULT_FILES: {MAX_RESULT_FILES}")
 
 # Global variables to store models
 tokenizer = None
@@ -132,8 +136,82 @@ def _get_user_data_dir(wallet_address):
     return user_dir
 
 
+def _to_safe_relative_path(file_path):
+    """Convert absolute file path to safe relative path based on DATA_DIR"""
+    if not file_path:
+        return file_path
+
+    try:
+        # Normalize path
+        abs_path = os.path.abspath(file_path)
+        data_dir_abs = os.path.abspath(app.config["DATA_DIR"])
+
+        # Check if file is within DATA_DIR
+        if abs_path.startswith(data_dir_abs):
+            # Convert to relative path
+            rel_path = os.path.relpath(abs_path, data_dir_abs)
+            # Normalize path separators and ensure no path traversal
+            rel_path = rel_path.replace('\\', '/').strip('/')
+            # Additional security check
+            if '..' in rel_path or rel_path.startswith('/'):
+                raise ValueError("Invalid path")
+            return rel_path
+        else:
+            raise ValueError("File path outside DATA_DIR")
+
+    except Exception:
+        # If conversion fails, return None for security
+        return None
+
+
+def _to_absolute_path(relative_path):
+    """Convert safe relative path to absolute path"""
+    if not relative_path:
+        return None
+
+    try:
+        # Security check: ensure no path traversal
+        if '..' in relative_path or relative_path.startswith('/'):
+            raise ValueError("Invalid relative path")
+
+        # Convert to absolute path
+        abs_path = os.path.abspath(os.path.join(app.config["DATA_DIR"], relative_path))
+
+        # Security check: ensure path is within DATA_DIR
+        data_dir_abs = os.path.abspath(app.config["DATA_DIR"])
+        if not abs_path.startswith(data_dir_abs):
+            raise ValueError("Path outside DATA_DIR")
+
+        return abs_path
+
+    except Exception:
+        return None
+
+
+def _is_safe_file_path(file_path, wallet_address=None):
+    """Check if file path is safe for the given user"""
+    if not file_path:
+        return False
+
+    abs_path = _to_absolute_path(file_path)
+    if not abs_path:
+        return False
+
+    data_dir_abs = os.path.abspath(app.config["DATA_DIR"])
+    if abs_path == os.path.join(data_dir_abs, os.path.basename(abs_path)):
+        return True
+
+    # If wallet address is provided, ensure file is in user directory
+    if wallet_address:
+        user_dir = _get_user_data_dir(wallet_address)
+        return abs_path.startswith(user_dir)
+
+    return False
+
+
 def _cleanup_old_files(user_dir, suffixes, max_files=MAX_UPLOAD_FILES):
     """Clean up oldest files if exceed maximum limit"""
+    print(f"Cleaning up old files {suffixes} in {user_dir}...if exceeding {max_files}")
     if not os.path.exists(user_dir):
         return
 
@@ -176,10 +254,17 @@ def _get_data_files(data_dir):
             if file.endswith((".csv", ".feather")):
                 file_path = os.path.join(data_dir, file)
                 file_size = os.path.getsize(file_path)
+
+                # Convert absolute path to safe relative path
+                safe_relative_path = _to_safe_relative_path(file_path)
+                if safe_relative_path is None:
+                    # Skip files that cannot be safely converted
+                    continue
+
                 data_files.append(
                     {
                         "name": file,
-                        "path": file_path,
+                        "path": safe_relative_path,
                         "size": (
                             f"{file_size / 1024:.1f} KB"
                             if file_size < 1024 * 1024
@@ -257,10 +342,15 @@ def save_prediction_results(
         filename = f"prediction_{timestamp}.json"
         filepath = os.path.join(results_dir, filename)
 
+        # Convert absolute file path to relative path for storage
+        relative_file_path = _to_safe_relative_path(file_path)
+        if not relative_file_path:
+            relative_file_path = "unknown_file"
+
         # Prepare data for saving
         save_data = {
             "timestamp": datetime.datetime.now().isoformat(),
-            "file_path": file_path,
+            "file_path": relative_file_path,
             "prediction_type": prediction_type,
             "prediction_params": prediction_params,
             "input_data_summary": {
@@ -604,13 +694,16 @@ def upload_data():
 
         message = ". ".join(message_parts)
 
+        # Convert absolute path to safe relative path for return
+        safe_relative_path = _to_safe_relative_path(file_path)
+
         return jsonify(
             {
                 "success": True,
                 "message": message,
                 "file_info": {
                     "name": filename,
-                    "path": file_path,
+                    "path": safe_relative_path,
                     "size": (
                         f"{file_size / 1024:.1f} KB"
                         if file_size < 1024 * 1024
@@ -636,7 +729,17 @@ def load_data():
         if not file_path:
             return jsonify({"error": "File path cannot be empty"}), 400
 
-        df, error = load_data_file(file_path)
+        # Convert relative path to absolute path and check security
+        abs_file_path = _to_absolute_path(file_path)
+        if not abs_file_path:
+            return jsonify({"error": "Invalid file path"}), 400
+
+        # Additional security check: ensure user can access this file
+        wallet_address = session.get("wallet_address")
+        if wallet_address and not _is_safe_file_path(file_path, wallet_address):
+            return jsonify({"error": "Access to this file is not allowed"}), 403
+
+        df, error = load_data_file(abs_file_path)
         if error:
             return jsonify({"error": error}), 400
 
@@ -723,8 +826,17 @@ def predict():
         if not file_path:
             return jsonify({"error": "File path cannot be empty"}), 400
 
+        # Convert relative path to absolute path and check security
+        abs_file_path = _to_absolute_path(file_path)
+        if not abs_file_path:
+            return jsonify({"error": "Invalid file path"}), 400
+
+        # Additional security check: ensure user can access this file
+        if not _is_safe_file_path(file_path, wallet_address):
+            return jsonify({"error": "Access to this file is not allowed"}), 403
+
         # Load data
-        df, error = load_data_file(file_path)
+        df, error = load_data_file(abs_file_path)
         if error:
             return jsonify({"error": error}), 400
 
@@ -933,7 +1045,7 @@ def predict():
         try:
             save_prediction_results(
                 results_dir=results_dir,
-                file_path=file_path,
+                file_path=abs_file_path,
                 prediction_type=prediction_type,
                 prediction_results=prediction_results,
                 actual_data=actual_data,
@@ -1068,8 +1180,17 @@ def all_in_one_predict():
         if not file_path:
             return jsonify({"error": "File path cannot be empty"}), 400
 
+        # Convert relative path to absolute path and check security
+        abs_file_path = _to_absolute_path(file_path)
+        if not abs_file_path:
+            return jsonify({"error": "Invalid file path"}), 400
+
+        # Additional security check: ensure user can access this file
+        if not _is_safe_file_path(file_path, wallet_address):
+            return jsonify({"error": "Access to this file is not allowed"}), 403
+
         # Load data
-        df, error = load_data_file(file_path)
+        df, error = load_data_file(abs_file_path)
         if error:
             return jsonify({"error": error}), 400
 
@@ -1153,9 +1274,9 @@ def all_in_one_predict():
                 sample_count=sample_count,
             )
 
-            file_name = os.path.basename(file_path)
+            file_name = os.path.basename(abs_file_path)
             pred_file_path = os.path.join(results_dir, f"{file_name}_pred.json")
-            # pred_df.to_csv(f"{file_path}_pred.csv", index=False)
+            # pred_df.to_csv(f"{abs_file_path}_pred.csv", index=False)
             pred_df.to_json(pred_file_path, orient="records")
             _cleanup_old_files(results_dir, (".json"), MAX_RESULT_FILES)
 
@@ -1165,11 +1286,16 @@ def all_in_one_predict():
                 500,
             )
 
+        # Convert absolute prediction file path to relative path for return
+        pred_relative_path = _to_safe_relative_path(pred_file_path)
+        if not pred_relative_path:
+            return jsonify({"error": "Failed to save prediction results"}), 500
+
         return jsonify(
             {
                 "success": True,
                 "prediction_type": prediction_type,
-                "prediction_results": f"{file_path}_pred.json",
+                "prediction_result_file": pred_relative_path,
             }
         )
     except Exception as e:
