@@ -360,11 +360,25 @@ class TinyWebClient:
             filename = os.path.basename(file_path)
             with open(file_path, 'rb') as f:
                 files = {'file': (filename, f, 'application/octet-stream')}
-                return self._make_request("POST", "/api/upload-data", files=files)
+                # Temporarily remove Content-Type header to let requests set multipart/form-data
+                original_headers = self.session.headers.pop('Content-Type', None)
+                try:
+                    return self._make_request("POST", "/api/upload-data", files=files)
+                finally:
+                    # Restore original Content-Type header
+                    if original_headers:
+                        self.session.headers['Content-Type'] = original_headers
         else:
             filename = os.path.basename(file_path)
             files = {'file': (filename, file_obj, 'application/octet-stream')}
-            return self._make_request("POST", "/api/upload-data", files=files)
+            # Temporarily remove Content-Type header to let requests set multipart/form-data
+            original_headers = self.session.headers.pop('Content-Type', None)
+            try:
+                return self._make_request("POST", "/api/upload-data", files=files)
+            finally:
+                # Restore original Content-Type header
+                if original_headers:
+                    self.session.headers['Content-Type'] = original_headers
 
     def load_data_file(self, file_path: str) -> Dict[str, Any]:
         """
