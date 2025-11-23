@@ -15,7 +15,7 @@ Features:
 Example usage:
     from tinyweb_client import TinyWebClient
 
-    client = TinyWebClient(base_url="http://localhost:5000")
+    client = TinyWebClient(base_url="http://localhost:7070")
 
     # Authenticate with wallet
     client.authenticate_wallet("0x...", private_key)
@@ -68,7 +68,7 @@ class TinyWebClient:
     financial data prediction using Web3 authentication.
     """
 
-    def __init__(self, base_url: str = "http://localhost:5000", timeout: int = 300):
+    def __init__(self, base_url: str = "http://localhost:7070", timeout: int = 300):
         """
         Initialize TinyWeb client.
 
@@ -579,7 +579,7 @@ class TinyWebClient:
 
 
 # Example usage and helper functions
-def create_client_with_web3(base_url: str = "http://localhost:5000",
+def create_client_with_web3(base_url: str = "http://localhost:7070",
                           wallet_address: str = None,
                           private_key: str = None) -> TinyWebClient:
     """
@@ -636,18 +636,6 @@ if __name__ == "__main__":
         # Get model status
         model_status = client.get_model_status()
         print(f"Model status: {model_status}")
-
-        # Example: create invite code (only works for admin users)
-        try:
-            res = client.create_invite_code("TEST123", 1)
-            print(f"Create invite code result: {res}")
-        except AuthenticationError as e:
-            print(f"Cannot create invite code: {e}")
-        except TinyWebError as e:
-            if "admin" in str(e).lower():
-                print(f"Cannot create invite code: Admin privileges required")
-            else:
-                print(f"Create invite code error: {e}")
 
     except TinyWebError as e:
         print(f"Error: {e}")
