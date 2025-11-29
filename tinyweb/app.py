@@ -1218,9 +1218,10 @@ def only_predict():
             index = -lookback
             x_df = df.iloc[index:][required_cols]
             x_timestamp = df.iloc[index:]["timestamps"]
+            time_diff = x_timestamp.iloc[-1] - x_timestamp.iloc[-2]
             timestamp_list = []
             for i in range(pred_len):
-                t = x_timestamp.iloc[-1] + timedelta(days=1+i)
+                t = x_timestamp.iloc[-1] + time_diff * (i + 1)
                 timestamp_list.append(t)
             y_timestamp = pd.Series(timestamp_list, name="timestamps")
             prediction_type = "Kronos model prediction (latest data)"
