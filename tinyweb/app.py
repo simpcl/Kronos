@@ -63,7 +63,7 @@ AVAILABLE_MODELS = {
     },
 }
 
-load_dotenv()  # 加载 .env 文件中的变量
+load_dotenv()  # Load variables from .env file
 
 KRONOS_MODEL_KEY = os.environ.get("KRONOS_MODEL_KEY", "kronos-base")
 KRONOS_MODEL_DEVICE = os.environ.get("KRONOS_MODEL_DEVICE", "cpu")
@@ -490,7 +490,7 @@ def create_prediction_chart(
             high=historical_df["high"],
             low=historical_df["low"],
             close=historical_df["close"],
-            name="Historical Data (400 data points)",
+            name="Historical Data (400 points)",
             increasing_line_color="#26A69A",
             decreasing_line_color="#EF5350",
         )
@@ -524,7 +524,7 @@ def create_prediction_chart(
                 high=pred_df["high"],
                 low=pred_df["low"],
                 close=pred_df["close"],
-                name="Prediction Data (120 data points)",
+                name="Prediction Data (120 points)",
                 increasing_line_color="#66BB6A",
                 decreasing_line_color="#FF7043",
             )
@@ -567,7 +567,7 @@ def create_prediction_chart(
                 high=actual_df["high"],
                 low=actual_df["low"],
                 close=actual_df["close"],
-                name="Actual Data (120 data points)",
+                name="Actual Data (120 points)",
                 increasing_line_color="#FF9800",
                 decreasing_line_color="#F44336",
             )
@@ -575,7 +575,7 @@ def create_prediction_chart(
 
     # Update layout
     fig.update_layout(
-        title="Kronos Financial Prediction Results - 400 Historical Points + 120 Prediction Points vs 120 Actual Points",
+        title="Kronos Financial Prediction Results - 400 Historical + 120 Prediction vs 120 Actual Points",
         xaxis_title="Time",
         yaxis_title="Price",
         template="plotly_white",

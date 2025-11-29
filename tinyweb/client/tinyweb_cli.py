@@ -13,7 +13,7 @@ Commands:
         config               Show current configuration
 
     Authentication:
-        login                 Authenticate with wallet signature
+        login                Authenticate with wallet signature
         status               Show authentication status
         logout               Logout current user
         profile              Update user profile
@@ -33,7 +33,7 @@ Commands:
 
     Predictions:
         predict              Run Kronos model prediction
-        predict-only          Run simplified all-in-one prediction
+        predict-only         Run simplified all-in-one prediction
 
     Model Management:
         list-models          List available models
@@ -54,7 +54,7 @@ Examples:
     python3 tinyweb_cli.py upload --file data.csv
 
     # Run prediction
-    python3 tinyweb_cli.py predict --file data.csv --lookback 400 --pred-len 120
+    python3 tinyweb_cli.py predict-only --file data.csv --lookback 400 --pred-len 120
 
     # Download prediction result file
     python3 tinyweb_cli.py download --file-path wallet_address/filename_pred.json --save prediction_result.json
@@ -325,10 +325,7 @@ class TinyWebCLI:
         try:
             priv_key_bytes = secrets.token_bytes(32)
             acct = Account.from_key(priv_key_bytes)
-            # return {
-            #     "address": acct.address,            # 以太坊地址（0x 开头）
-            #     "private_key_hex": acct.key.hex()   # 私钥（hex）
-            # }
+
             print(f"✅ Wallet generated successfully")
             print(f"Wallet Address: {acct.address}")
             print(f"Private Key: {acct.key.hex()}")
