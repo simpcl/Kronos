@@ -1,6 +1,6 @@
 """
-认证路由模块
-定义 Web3 钱包认证相关的 Flask 路由
+Authentication Routes Module
+Defines Flask routes for Web3 wallet authentication
 """
 
 import os
@@ -10,7 +10,7 @@ from .auth import get_wallet_auth
 from .db import get_user_db
 
 
-# 创建认证蓝图
+# Create authentication blueprint
 auth_bp = Blueprint("auth", __name__, url_prefix="/api/auth")
 
 
@@ -39,7 +39,7 @@ def require_admin_auth(f):
         if not address:
             return jsonify({"error": "Not authenticated"}), 401
         ADMIN_WALLET_ADDRESS = os.environ.get("ADMIN_WALLET_ADDRESS", "")
-        if address != ADMIN_WALLET_ADDRESS:
+        if address != ADMIN_WALLET_ADDRESS.lower():
             print(f"admin wallet address: {ADMIN_WALLET_ADDRESS}")
             print(f"Not admin: {address}")
             return jsonify({"error": "Need admin authenticated"}), 403
@@ -51,18 +51,18 @@ def require_admin_auth(f):
 @auth_bp.route("/challenge", methods=["POST"])
 def get_challenge():
     """
-    获取签名挑战消息（登录/注册的第一步）
+    Get signature challenge message (first step of login/registration)
 
-    请求体:
+    Request body:
         {
             "wallet_address": "0x..."
         }
 
-    返回:
+    Returns:
         {
             "success": true,
-            "message": "挑战消息",
-            "nonce": "随机字符串"
+            "message": "Challenge message",
+            "nonce": "Random string"
         }
     """
     try:
@@ -74,14 +74,14 @@ def get_challenge():
 
         auth = get_wallet_auth()
 
-        # 验证地址格式
+        # Validate address format
         if not auth.validate_address(address):
             return jsonify({"error": "Invalid wallet address format"}), 400
 
-        # 生成挑战消息
+        # Generate challenge message
         message, nonce = auth.generate_challenge_message(address)
 
-        # 将 nonce 存入 session（用于防重放攻击）
+        # Store nonce in session (for replay attack prevention)
         session["auth_nonce"] = nonce
         session["auth_address"] = address.lower()
 
@@ -93,17 +93,17 @@ def get_challenge():
 @auth_bp.route("/verify", methods=["POST"])
 def verify_auth():
     """
-    验证签名并完成登录/注册
+    Verify signature and complete login/registration
 
-    请求体:
+    Request body:
         {
             "wallet_address": "0x...",
             "signature": "0x...",
-            "message": "挑战消息",
-            "invite_code": "邀请码（新用户注册时必需）"
+            "message": "Challenge message",
+            "invite_code": "Invite code (required for new user registration)"
         }
 
-    返回:
+    Returns:
         {
             "success": true,
             "is_new_user": false,
@@ -123,62 +123,64 @@ def verify_auth():
 
         auth = get_wallet_auth()
 
-        # 验证签名
+        # Verify signature
         if not auth.verify_signature(message, signature, address):
             return jsonify({"error": "Invalid signature"}), 401
 
         db = get_user_db()
 
-        # 检查用户是否存在
+        # Check if user exists
         existing_user = db.get_user_by_address(address)
 
         if existing_user:
-            # 用户已存在，更新登录信息并允许登录
+            # User exists, update login info and allow login
             is_new = False
             db.update_login_info(address)
             user = db.get_user_by_address(address)
         else:
-            # 用户不存在，需要邀请码才能注册
-            if not invite_code:
-                return (
-                    jsonify(
-                        {
-                            "error": "Invite code required for registration",
-                            "requires_invite": True,
-                        }
-                    ),
-                    403,
-                )
+            # User doesn't exist, invite code required for registration
+            admin_wallet_address = os.environ.get("ADMIN_WALLET_ADDRESS", "")
+            if admin_wallet_address.lower() != address:
+                if not invite_code:
+                    return (
+                        jsonify(
+                            {
+                                "error": "Invite code required for registration",
+                                "requires_invite": True,
+                            }
+                        ),
+                        403,
+                    )
 
-            # 验证邀请码
-            if not db.validate_invite_code(invite_code):
-                return (
-                    jsonify(
-                        {
-                            "error": "Invalid or expired invite code",
-                            "requires_invite": True,
-                        }
-                    ),
-                    403,
-                )
+                # Validate invite code
+                if not db.validate_invite_code(invite_code):
+                    return (
+                        jsonify(
+                            {
+                                "error": "Invalid or expired invite code",
+                                "requires_invite": True,
+                            }
+                        ),
+                        403,
+                    )
 
-            # 使用邀请码并创建用户
-            if not db.use_invite_code(invite_code, address):
-                return (
-                    jsonify(
-                        {"error": "Failed to use invite code", "requires_invite": True}
-                    ),
-                    403,
-                )
+                # Use invite code and create user
+                if not db.use_invite_code(invite_code, address):
+                    return (
+                        jsonify(
+                            {"error": "Failed to use invite code", "requires_invite": True}
+                        ),
+                        403,
+                    )
 
-            # 创建新用户
+            # Create new user
             is_new = db.create_user(address)
             user = db.get_user_by_address(address)
 
             if not user:
                 return jsonify({"error": "Failed to create user"}), 500
 
-        # 创建 session
+        # Create session
         session["wallet_address"] = address.lower()
         session["authenticated"] = True
 
@@ -204,14 +206,14 @@ def verify_auth():
 @require_auth
 def update_profile():
     """
-    更新用户资料（可选注册信息）
+    Update user profile (optional registration information)
 
-    请求体:
+    Request body:
         {
-            "nickname": "用户昵称"
+            "nickname": "User nickname"
         }
 
-    返回:
+    Returns:
         {
             "success": true,
             "message": "Profile updated successfully",
@@ -250,9 +252,9 @@ def update_profile():
 @auth_bp.route("/logout", methods=["POST"])
 def logout():
     """
-    登出
+    Logout
 
-    返回:
+    Returns:
         {
             "success": true,
             "message": "Logged out successfully"
@@ -265,12 +267,12 @@ def logout():
 @auth_bp.route("/status", methods=["GET"])
 def auth_status():
     """
-    检查登录状态
+    Check authentication status
 
-    返回:
+    Returns:
         {
             "authenticated": true/false,
-            "user": {...}  # 如果已登录
+            "user": {...}  # if authenticated
         }
     """
     if "wallet_address" in session and session.get("authenticated"):
@@ -299,18 +301,18 @@ def auth_status():
 @require_admin_auth
 def create_invite_code():
     """
-    创建邀请码（需要登录）
+    Create invite code (requires login)
 
-    请求体:
+    Request body:
         {
-            "code": "邀请码",
-            "max_uses": 1  # 最大使用次数，0 表示无限制
+            "code": "Invite code",
+            "max_uses": 1  # Maximum uses, 0 means unlimited
         }
 
-    返回:
+    Returns:
         {
             "success": true,
-            "code": "邀请码",
+            "code": "Invite code",
             "message": "Invite code created successfully"
         }
     """
@@ -349,18 +351,18 @@ def create_invite_code():
 @auth_bp.route("/invite/validate", methods=["POST"])
 def validate_invite_code_endpoint():
     """
-    验证邀请码是否有效（无需登录）
+    Validate invite code (no login required)
 
-    请求体:
+    Request body:
         {
-            "code": "邀请码"
+            "code": "Invite code"
         }
 
-    返回:
+    Returns:
         {
             "valid": true/false,
-            "code": "邀请码",
-            "info": {...}  # 如果有效
+            "code": "Invite code",
+            "info": {...}  # if valid
         }
     """
     try:
@@ -398,9 +400,9 @@ def validate_invite_code_endpoint():
 @require_auth
 def list_invite_codes():
     """
-    获取邀请码列表（需要登录）
+    Get invite code list (requires login)
 
-    返回:
+    Returns:
         {
             "success": true,
             "codes": [...]
@@ -420,14 +422,14 @@ def list_invite_codes():
 @require_auth
 def deactivate_invite_code_endpoint():
     """
-    停用邀请码（需要登录）
+    Deactivate invite code (requires login)
 
-    请求体:
+    Request body:
         {
-            "code": "邀请码"
+            "code": "Invite code"
         }
 
-    返回:
+    Returns:
         {
             "success": true,
             "message": "Invite code deactivated successfully"

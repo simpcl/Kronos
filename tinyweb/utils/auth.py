@@ -1,6 +1,6 @@
 """
-Web3 钱包认证模块
-处理区块链钱包签名验证和认证逻辑
+Web3 Wallet Authentication Module
+Handles blockchain wallet signature verification and authentication logic
 """
 import secrets
 import datetime
@@ -11,39 +11,39 @@ from web3.exceptions import InvalidAddress
 
 
 class WalletAuth:
-    """钱包认证类"""
+    """Wallet authentication class"""
     
     def __init__(self):
-        """初始化认证模块"""
+        """Initialize authentication module"""
         self.w3 = Web3()
     
     def verify_signature(self, message: str, signature: str, address: str) -> bool:
         """
-        验证以太坊签名
-        
+        Verify Ethereum signature
+
         Args:
-            message: 原始消息
-            signature: 签名（十六进制字符串，0x开头）
-            address: 钱包地址
-            
+            message: Original message
+            signature: Signature (hex string starting with 0x)
+            address: Wallet address
+
         Returns:
-            验证是否成功
+            Whether verification is successful
         """
         try:
-            # 检查地址格式
+            # Check address format
             if not self.w3.is_address(address):
                 return False
             
-            # 编码消息（EIP-191 标准）
+            # Encode message (EIP-191 standard)
             message_hash = encode_defunct(text=message)
             
-            # 恢复签名者地址
+            # Recover signer address
             recovered_address = self.w3.eth.account.recover_message(
                 message_hash, 
                 signature=signature
             )
             
-            # 比较地址（不区分大小写）
+            # Compare addresses (case insensitive)
             return recovered_address.lower() == address.lower()
             
         except (ValueError, InvalidAddress) as e:
@@ -55,13 +55,13 @@ class WalletAuth:
     
     def generate_challenge_message(self, address: str) -> Tuple[str, str]:
         """
-        生成认证挑战消息
-        
+        Generate authentication challenge message
+
         Args:
-            address: 钱包地址
-            
+            address: Wallet address
+
         Returns:
-            (挑战消息, nonce) 元组
+            (challenge message, nonce) tuple
         """
         timestamp = datetime.datetime.now().isoformat()
         nonce = secrets.token_hex(16)
@@ -78,13 +78,13 @@ class WalletAuth:
     
     def validate_address(self, address: str) -> bool:
         """
-        验证钱包地址格式
-        
+        Validate wallet address format
+
         Args:
-            address: 钱包地址
-            
+            address: Wallet address
+
         Returns:
-            地址格式是否有效
+            Whether address format is valid
         """
         try:
             return self.w3.is_address(address)
@@ -92,16 +92,16 @@ class WalletAuth:
             return False
 
 
-# 全局认证实例
+# Global authentication instance
 _auth_instance = None
 
 
 def get_wallet_auth() -> WalletAuth:
     """
-    获取全局认证实例（单例模式）
-    
+    Get global authentication instance (singleton pattern)
+
     Returns:
-        WalletAuth 实例
+        WalletAuth instance
     """
     global _auth_instance
     if _auth_instance is None:

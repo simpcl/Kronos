@@ -1,6 +1,6 @@
 """
-数据库工具模块
-用于管理用户数据的 SQLite 数据库操作
+Database Utility Module
+SQLite database operations for managing user data
 """
 
 import sqlite3
@@ -10,17 +10,17 @@ from typing import Optional, Dict, Any
 
 
 class UserDB:
-    """用户数据库管理类"""
+    """User database management class"""
 
     def __init__(self, db_path: Optional[str] = None):
         """
-        初始化数据库连接
+        Initialize database connection
 
         Args:
-            db_path: 数据库文件路径，如果为 None 则使用默认路径
+            db_path: Database file path, use default path if None
         """
         if db_path is None:
-            # 默认数据库路径在 webui 目录下
+            # Default database path is in the webui directory
             base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
             db_path = os.path.join(base_dir, "users.db")
 
@@ -28,11 +28,11 @@ class UserDB:
         self._init_database()
 
     def _init_database(self):
-        """初始化数据库表结构"""
+        """Initialize database table structure"""
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
-        # 创建用户表
+        # Create user table
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS users (
@@ -45,7 +45,7 @@ class UserDB:
         """
         )
 
-        # 创建索引提高查询性能
+        # Create indexes to improve query performance
         cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_wallet_address 
@@ -53,7 +53,7 @@ class UserDB:
         """
         )
 
-        # 创建邀请码表
+        # Create invite codes table
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS invite_codes (
@@ -67,7 +67,7 @@ class UserDB:
         """
         )
 
-        # 创建邀请码使用记录表
+        # Create invite code usage records table
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS invite_code_uses (
@@ -80,7 +80,7 @@ class UserDB:
         """
         )
 
-        # 创建索引
+        # Create indexes
         cursor.execute(
             """
             CREATE INDEX IF NOT EXISTS idx_invite_code 
@@ -100,16 +100,16 @@ class UserDB:
 
     def get_user_by_address(self, address: str) -> Optional[Dict[str, Any]]:
         """
-        根据钱包地址获取用户信息
+        Get user information by wallet address
 
         Args:
-            address: 钱包地址
+            address: Wallet address
 
         Returns:
-            用户信息字典，如果不存在返回 None
+            User information dictionary, return None if not exists
         """
         conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row  # 返回字典格式
+        conn.row_factory = sqlite3.Row  # Return dictionary format
         cursor = conn.cursor()
 
         cursor.execute(
@@ -130,13 +130,13 @@ class UserDB:
 
     def create_user(self, address: str) -> bool:
         """
-        创建新用户（仅创建，不更新已存在的用户）
+        Create new user (only create, don't update existing users)
 
         Args:
-            address: 钱包地址
+            address: Wallet address
 
         Returns:
-            True 表示创建了新用户，False 表示用户已存在
+            True means new user created, False means user already exists
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -152,7 +152,7 @@ class UserDB:
             conn.commit()
             is_new = True
         except sqlite3.IntegrityError:
-            # 用户已存在
+            # User already exists
             is_new = False
         finally:
             conn.close()
@@ -161,13 +161,13 @@ class UserDB:
 
     def update_login_info(self, address: str) -> bool:
         """
-        更新用户登录信息
+        Update user login information
 
         Args:
-            address: 钱包地址
+            address: Wallet address
 
         Returns:
-            是否成功更新
+            Whether update was successful
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -189,14 +189,14 @@ class UserDB:
 
     def update_user_info(self, address: str, nickname: Optional[str] = None) -> bool:
         """
-        更新用户信息（可选注册信息）
+        Update user information (optional registration information)
 
         Args:
-            address: 钱包地址
-            nickname: 昵称
+            address: Wallet address
+            nickname: Nickname
 
         Returns:
-            是否成功更新
+            Whether update was successful
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -224,13 +224,13 @@ class UserDB:
 
     def get_all_users(self, limit: int = 100) -> list:
         """
-        获取所有用户列表（用于管理）
+        Get all users list (for management)
 
         Args:
-            limit: 返回数量限制
+            limit: Return quantity limit
 
         Returns:
-            用户列表
+            User list
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -255,15 +255,15 @@ class UserDB:
         self, code: str, max_uses: int = 1, created_by: Optional[str] = None
     ) -> bool:
         """
-        创建邀请码
+        Create invite code
 
         Args:
-            code: 邀请码
-            max_uses: 最大使用次数，0 表示无限制
-            created_by: 创建者钱包地址
+            code: Invite code
+            max_uses: Maximum uses, 0 means unlimited
+            created_by: Creator wallet address
 
         Returns:
-            是否成功创建
+            Whether creation was successful
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -287,13 +287,13 @@ class UserDB:
 
     def validate_invite_code(self, code: str) -> bool:
         """
-        验证邀请码是否有效
+        Validate invite code
 
         Args:
-            code: 邀请码
+            code: Invite code
 
         Returns:
-            邀请码是否有效可用
+            Whether invite code is valid and usable
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -312,11 +312,11 @@ class UserDB:
         if not row:
             return False
 
-        # 检查使用次数限制
+        # Check usage limit
         max_uses = row["max_uses"]
         current_uses = row["current_uses"]
 
-        # max_uses = 0 表示无限制
+        # max_uses = 0 means unlimited
         if max_uses > 0 and current_uses >= max_uses:
             return False
 
@@ -324,20 +324,20 @@ class UserDB:
 
     def use_invite_code(self, code: str, address: str) -> bool:
         """
-        使用邀请码（注册新用户时调用）
+        Use invite code (called when registering new user)
 
         Args:
-            code: 邀请码
-            address: 使用邀请码的钱包地址
+            code: Invite code
+            address: Wallet address using the invite code
 
         Returns:
-            是否成功使用
+            Whether usage was successful
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
 
         try:
-            # 检查是否已经使用过该邀请码
+            # Check if invite code has already been used
             cursor.execute(
                 """
                 SELECT COUNT(*) FROM invite_code_uses 
@@ -351,7 +351,7 @@ class UserDB:
                 conn.close()
                 return False
 
-            # 检查邀请码是否有效
+            # Check if invite code is valid
             cursor.execute(
                 """
                 SELECT max_uses, current_uses, is_active 
@@ -368,12 +368,12 @@ class UserDB:
 
             max_uses, current_uses = row[0], row[1]
 
-            # 检查使用次数限制
+            # Check usage limit
             if max_uses > 0 and current_uses >= max_uses:
                 conn.close()
                 return False
 
-            # 增加使用次数
+            # Increment usage count
             cursor.execute(
                 """
                 UPDATE invite_codes 
@@ -383,7 +383,7 @@ class UserDB:
                 (code.upper(),),
             )
 
-            # 记录使用历史
+            # Record usage history
             cursor.execute(
                 """
                 INSERT INTO invite_code_uses (code, used_by)
@@ -404,13 +404,13 @@ class UserDB:
 
     def get_invite_code_info(self, code: str) -> Optional[Dict[str, Any]]:
         """
-        获取邀请码信息
+        Get invite code information
 
         Args:
-            code: 邀请码
+            code: Invite code
 
         Returns:
-            邀请码信息字典，如果不存在返回 None
+            Invite code information dictionary, return None if not exists
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -438,13 +438,13 @@ class UserDB:
 
     def get_all_invite_codes(self, limit: int = 100) -> list:
         """
-        获取所有邀请码列表（用于管理）
+        Get all invite codes list (for management)
 
         Args:
-            limit: 返回数量限制
+            limit: Return quantity limit
 
         Returns:
-            邀请码列表
+            Invite code list
         """
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
@@ -475,13 +475,13 @@ class UserDB:
 
     def deactivate_invite_code(self, code: str) -> bool:
         """
-        停用邀请码
+        Deactivate invite code
 
         Args:
-            code: 邀请码
+            code: Invite code
 
         Returns:
-            是否成功停用
+            Whether deactivation was successful
         """
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
@@ -501,16 +501,16 @@ class UserDB:
         return updated
 
 
-# 全局数据库实例
+# Global database instance
 _user_db_instance = None
 
 
 def get_user_db() -> UserDB:
     """
-    获取全局数据库实例（单例模式）
+    Get global database instance (singleton pattern)
 
     Returns:
-        UserDB 实例
+        UserDB instance
     """
     global _user_db_instance
     if _user_db_instance is None:
