@@ -10,9 +10,11 @@ from werkzeug.utils import secure_filename
 import sys
 import warnings
 import datetime
+from datetime import datetime, timedelta
 import secrets
 from utils.auth_routes import require_auth, require_admin_auth
 from dotenv import load_dotenv
+import traceback
 
 warnings.filterwarnings("ignore")
 
@@ -1212,57 +1214,20 @@ def only_predict():
             if "volume" in df.columns:
                 required_cols.append("volume")
 
-            # Process time period selection
-            start_date = data.get("start_date")
-
-            if start_date:
-                # Custom time period - fix logic: use data within selected window
-                start_dt = pd.to_datetime(start_date)
-
-                # Find data after start time
-                mask = df["timestamps"] >= start_dt
-                time_range_df = df[mask]
-
-                # Ensure sufficient data: lookback + pred_len
-                if len(time_range_df) < lookback + pred_len:
-                    return (
-                        jsonify(
-                            {
-                                "error": f'Insufficient data from start time {start_dt.strftime("%Y-%m-%d %H:%M")}, need at least {lookback + pred_len} data points, currently only {len(time_range_df)} available'
-                            }
-                        ),
-                        400,
-                    )
-
-                # Use first lookback data points within selected window for prediction
-                x_df = time_range_df.iloc[:lookback][required_cols]
-                x_timestamp = time_range_df.iloc[:lookback]["timestamps"]
-
-                # Use last pred_len data points within selected window as actual values
-                y_timestamp = time_range_df.iloc[lookback : lookback + pred_len][
-                    "timestamps"
-                ]
-
-                # Calculate actual time period length
-                start_timestamp = time_range_df["timestamps"].iloc[0]
-                end_timestamp = time_range_df["timestamps"].iloc[
-                    lookback + pred_len - 1
-                ]
-                time_span = end_timestamp - start_timestamp
-
-                prediction_type = f"Kronos model prediction (within selected window: first {lookback} data points for prediction, last {pred_len} data points for comparison, time span: {time_span})"
-            else:
-                # Use latest data
-                x_df = df.iloc[:lookback][required_cols]
-                x_timestamp = df.iloc[:lookback]["timestamps"]
-                y_timestamp = df.iloc[lookback : lookback + pred_len]["timestamps"]
-                prediction_type = "Kronos model prediction (latest data)"
+            # Use latest data
+            index = -lookback
+            x_df = df.iloc[index:][required_cols]
+            x_timestamp = df.iloc[index:]["timestamps"]
+            timestamp_list = []
+            for i in range(pred_len):
+                t = x_timestamp.iloc[-1] + timedelta(days=1+i)
+                timestamp_list.append(t)
+            y_timestamp = pd.Series(timestamp_list, name="timestamps")
+            prediction_type = "Kronos model prediction (latest data)"
 
             # Ensure timestamps are Series format, not DatetimeIndex, to avoid .dt attribute error in Kronos model
             if isinstance(x_timestamp, pd.DatetimeIndex):
                 x_timestamp = pd.Series(x_timestamp, name="timestamps")
-            if isinstance(y_timestamp, pd.DatetimeIndex):
-                y_timestamp = pd.Series(y_timestamp, name="timestamps")
 
             pred_df = predictor.predict(
                 df=x_df,
@@ -1276,11 +1241,13 @@ def only_predict():
 
             file_name = os.path.basename(abs_file_path)
             pred_file_path = os.path.join(results_dir, f"{file_name}_pred.json")
-            # pred_df.to_csv(f"{abs_file_path}_pred.csv", index=False)
-            pred_df.to_json(pred_file_path, orient="records")
+            pred_df_with_timestamp = pred_df.reset_index()
+            pred_df_with_timestamp['timestamps'] = pred_df_with_timestamp['timestamps'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            pred_df_with_timestamp.to_json(pred_file_path, orient="records")
             _cleanup_old_files(results_dir, (".json"), MAX_RESULT_FILES)
 
         except Exception as e:
+            traceback.print_exc()
             return (
                 jsonify({"error": f"Kronos model prediction failed: {str(e)}"}),
                 500,

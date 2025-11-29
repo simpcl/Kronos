@@ -583,13 +583,19 @@ class TinyWebCLI:
             file_path = args.file or input("File path: ").strip()
             lookback = args.lookback or 400
             pred_len = args.pred_len or 120
+            temperature = args.temperature or 1.0
+            top_p = args.top_p or 0.9
+            sample_count = args.sample_count or 1
 
             print(f"🚀 Running only prediction on {file_path}...")
 
             result = self.client.predict_only(
                 file_path=file_path,
                 lookback=lookback,
-                pred_len=pred_len
+                pred_len=pred_len,
+                temperature=temperature,
+                top_p=top_p,
+                sample_count=sample_count
             )
 
             # If we reach here, prediction was successful (HTTP 200)
@@ -737,10 +743,13 @@ Examples:
         predict_parser.add_argument('--start-date', help='Start date for prediction (ISO format)')
         predict_parser.add_argument('--output', help='Save results to file')
 
-        predict_all_parser = subparsers.add_parser('predict-only', help='Run simplified only prediction')
-        predict_all_parser.add_argument('--file', required=True, help='Path to data file')
-        predict_all_parser.add_argument('--lookback', type=int, default=400, help='Lookback period (default: 400)')
-        predict_all_parser.add_argument('--pred-len', type=int, default=120, help='Prediction length (default: 120)')
+        predict_only_parser = subparsers.add_parser('predict-only', help='Run simplified only prediction')
+        predict_only_parser.add_argument('--file', required=True, help='Path to data file')
+        predict_only_parser.add_argument('--lookback', type=int, default=400, help='Lookback period (default: 400)')
+        predict_only_parser.add_argument('--pred-len', type=int, default=120, help='Prediction length (default: 120)')
+        predict_only_parser.add_argument('--temperature', type=float, default=1.0, help='Temperature parameter (default: 1.0)')
+        predict_only_parser.add_argument('--top-p', type=float, default=0.9, help='Top-p sampling parameter (default: 0.9)')
+        predict_only_parser.add_argument('--sample-count', type=int, default=1, help='Number of samples (default: 1)')
 
         # Model management commands
         subparsers.add_parser('list-models', help='List available models')

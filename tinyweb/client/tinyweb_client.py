@@ -435,7 +435,7 @@ class TinyWebClient:
 
     def predict_only(self, file_path: str, lookback: int = 400, pred_len: int = 120,
                           temperature: float = 1.0, top_p: float = 0.9,
-                          sample_count: int = 1, start_date: Optional[str] = None) -> Dict[str, Any]:
+                          sample_count: int = 1) -> Dict[str, Any]:
         """
         Run simplified only prediction.
 
@@ -446,7 +446,6 @@ class TinyWebClient:
             temperature: Temperature parameter for sampling
             top_p: Top-p sampling parameter
             sample_count: Number of prediction samples
-            start_date: Start date for prediction (ISO format)
 
         Returns:
             Prediction results file path
@@ -462,9 +461,6 @@ class TinyWebClient:
             "top_p": top_p,
             "sample_count": sample_count
         }
-
-        if start_date:
-            data["start_date"] = start_date
 
         return self._make_request("POST", "/api/only-predict", json=data)
 
