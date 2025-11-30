@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="en">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kronos Financial Prediction Web UI</title>
+    <title data-i18n="title">Kronos Financial Prediction Web UI</title>
     <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    <!-- 加载本地 ethers.js 库 -->
+    <!-- Load i18n library first -->
+    <script src="{{ url_for('static', filename='js/i18n.js') }}"></script>
+    <!-- Load local ethers.js library -->
     <script src="{{ url_for('static', filename='dist/ethers.umd.min.js') }}"></script>
     <style>
         * {
@@ -21,6 +23,30 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             color: #333;
+        }
+
+        /* Language Selector Styles */
+        #language-selector {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+        }
+
+        .language-selector {
+            background: white;
+            padding: 8px 12px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+            border: none;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .language-selector:hover {
+            background: #f8f9fa;
+            transform: translateY(-1px);
         }
 
         /* Wallet Login Styles */
@@ -529,49 +555,59 @@
 </head>
 
 <body>
+    <!-- Language Selector -->
+    <div id="language-selector">
+        <select id="language-select" class="language-selector">
+            <option value="en" data-i18n="language.english">English</option>
+            <option value="zh" data-i18n="language.chinese">中文</option>
+        </select>
+    </div>
+
     <!-- Wallet Login Section -->
     <div id="wallet-login">
         <div id="wallet-connect-section">
-            <button id="connect-wallet-btn" class="btn btn-primary">
-                🔐 连接钱包
+            <button id="connect-wallet-btn" class="btn btn-primary" data-i18n="wallet.connect">
+                🔐 Connect Wallet
             </button>
             <div id="wallet-login-section" style="display: none; margin-top: 10px;">
                 <p style="color: white; font-size: 14px; margin-bottom: 10px;">
-                    钱包已连接: <span id="connected-address" style="font-family: monospace;">-</span>
+                    <span data-i18n="wallet.connected">Wallet connected:</span>
+                    <span id="connected-address" style="font-family: monospace;">-</span>
                 </p>
                 <div class="wallet-input-group">
-                    <input type="text" id="wallet-invite" class="wallet-input" placeholder="邀请码（新用户需要）">
+                    <input type="text" id="wallet-invite" class="wallet-input"
+                           data-i18n-placeholder="wallet.invite_placeholder"
+                           placeholder="Invite code (required for new users)">
                 </div>
-                <button id="login-btn" class="btn btn-success">
-                    🔑 登录服务端
+                <button id="login-btn" class="btn btn-success" data-i18n="wallet.login">
+                    🔑 Login to Server
                 </button>
             </div>
         </div>
 
         <div id="wallet-info-section">
             <div class="wallet-card">
-                <p><strong>钱包地址:</strong></p>
+                <p><strong data-i18n="wallet.address">Wallet Address:</strong></p>
                 <p class="wallet-address" id="wallet-address-display">-</p>
-                <p><strong>昵称:</strong> <span id="user-nickname">-</span></p>
-                <button id="logout-btn" class="btn btn-secondary">登出</button>
+                <p><strong data-i18n="wallet.nickname">Nickname:</strong> <span id="user-nickname">-</span></p>
+                <button id="logout-btn" class="btn btn-secondary" data-i18n="wallet.logout">Logout</button>
             </div>
         </div>
     </div>
 
     <div class="container">
         <div class="header">
-            <h1>🚀 Kronos Financial Prediction Web UI</h1>
-            <p>AI-based financial K-line data prediction analysis platform</p>
+            <h1 data-i18n="title">🚀 Kronos Financial Prediction Web UI</h1>
+            <p data-i18n="subtitle">AI-based financial K-line data prediction analysis platform</p>
         </div>
 
         <div class="main-content">
             <div class="control-panel">
-                <h2>🎯 Control Panel</h2>
+                <h2 data-i18n="control_panel.title">🎯 Control Panel</h2>
 
                 <!-- Statement Display -->
                 <div id="statement-info" class="data-info">
-                    <h3>该页面基于开源项目Kronos，仅供个人学习交流AI
-                        Agent在金融领域的应用，不得用于商业用途。连接Web3钱包后可进行登录，第一次登录需要输入邀请码，服务端只会获取到钱包地址信息</h3>
+                    <h3 data-i18n="disclaimer.text">This page is based on the open-source project Kronos, for personal learning and communication of AI Agent applications in the financial field only, not for commercial use. Connect Web3 wallet to login, first-time login requires an invite code. The server will only obtain wallet address information</h3>
                 </div>
 
                 <!-- Application Status -->
@@ -583,57 +619,57 @@
 
                 <!-- Model Status -->
                 <div class="form-group">
-                    <label for="model-status">Model Status:</label>
-                    <large class="form-text" id="model-select-small">Select the Kronos model to use</large>
+                    <label for="model-status" data-i18n="control_panel.model_status">Model Status:</label>
+                    <large class="form-text" id="model-select-small" data-i18n="model_status.not_loaded">Model available but not loaded</large>
                     <br>
-                    <large class="form-text" id="device-select-small">Select the device to run the model on</large>
+                    <large class="form-text" id="device-select-small" data-i18n="control_panel.select_data_file">Select the device to run the model on</large>
                 </div>
 
                 <hr style="margin: 20px 0; border: 1px solid #e2e8f0;">
 
                 <!-- File Upload -->
                 <div class="form-group">
-                    <label for="file-upload">Upload Data File:</label>
+                    <label for="file-upload" data-i18n="control_panel.upload_file">Upload Data File:</label>
                     <input type="file" id="file-upload" accept=".csv,.feather" style="display: none;">
-                    <button id="upload-trigger-btn" class="btn btn-warning">
+                    <button id="upload-trigger-btn" class="btn btn-warning" data-i18n="control_panel.upload_button">
                         📤 Upload File
                     </button>
-                    <small class="form-text">Upload CSV or Feather file to data directory</small>
+                    <small class="form-text" data-i18n="file_upload.csv_desc">Upload CSV or Feather file to data directory</small>
                 </div>
 
                 <!-- Data File Selection -->
                 <div class="form-group">
-                    <label for="data-file-select">Select Data File:</label>
+                    <label for="data-file-select" data-i18n="control_panel.select_file">Select Data File:</label>
                     <select id="data-file-select">
-                        <option value="">Please load data file list first</option>
+                        <option value="" data-i18n="control_panel.load_file_list_first">Please load data file list first</option>
                     </select>
-                    <small class="form-text">Select K-line data file from data directory</small>
+                    <small class="form-text" data-i18n="file_upload.auto_select">Select K-line data file from data directory</small>
                 </div>
 
-                <button id="load-data-btn" class="btn btn-secondary">
+                <button id="load-data-btn" class="btn btn-secondary" data-i18n="control_panel.load_data">
                     📁 Load Data
                 </button>
 
                 <!-- Data Information Display -->
                 <div id="data-info" class="data-info" style="display: none;">
-                    <h3>📊 Data Information</h3>
-                    <p><strong>Rows:</strong> <span id="data-rows">-</span></p>
-                    <p><strong>Columns:</strong> <span id="data-cols">-</span></p>
-                    <p><strong>Time Range:</strong> <span id="data-time-range">-</span></p>
-                    <p><strong>Price Range:</strong> <span id="data-price-range">-</span></p>
-                    <p><strong>Time Frequency:</strong> <span id="data-timeframe">-</span></p>
-                    <p><strong>Prediction Columns:</strong> <span id="data-prediction-cols">-</span></p>
+                    <h3 data-i18n="data_info.title">📊 Data Information</h3>
+                    <p><strong data-i18n="data_info.rows">Rows:</strong> <span id="data-rows">-</span></p>
+                    <p><strong data-i18n="data_info.columns">Columns:</strong> <span id="data-cols">-</span></p>
+                    <p><strong data-i18n="data_info.time_range">Time Range:</strong> <span id="data-time-range">-</span></p>
+                    <p><strong data-i18n="data_info.price_range">Price Range:</strong> <span id="data-price-range">-</span></p>
+                    <p><strong data-i18n="data_info.timeframe">Time Frequency:</strong> <span id="data-timeframe">-</span></p>
+                    <p><strong data-i18n="data_info.prediction_columns">Prediction Columns:</strong> <span id="data-prediction-cols">-</span></p>
                 </div>
 
                 <hr style="margin: 20px 0; border: 1px solid #e2e8f0;">
 
                 <!-- Time Window Selector -->
                 <div class="time-window-container">
-                    <h3>⏰ Time Window Selection</h3>
+                    <h3 data-i18n="time_window.title">⏰ Time Window Selection</h3>
                     <div class="time-window-info">
-                        <span id="window-start">Start: --</span>
-                        <span id="window-end">End: --</span>
-                        <span id="window-size">Window Size: 400+120=520 data points</span>
+                        <span id="window-start" data-i18n="time_window.start">Start: --</span>
+                        <span id="window-end" data-i18n="time_window.end">End: --</span>
+                        <span id="window-size" data-i18n="time_window.window_size">Window Size: 400+120=520 data points</span>
                     </div>
 
                     <div class="time-window-slider">
@@ -648,103 +684,99 @@
                         </div>
                     </div>
 
-                    <small class="form-text">Drag slider to select time window position for 520 data points, green area
-                        represents fixed 400+120 data point range</small>
+                    <small class="form-text" data-i18n="time_window.description">Drag slider to select time window position for 520 data points, green area represents fixed 400+120 data point range</small>
                 </div>
 
                 <!-- Prediction Parameters -->
                 <div class="form-group">
-                    <label for="lookback">Lookback Window Size:</label>
+                    <label for="lookback" data-i18n="parameters.lookback">Lookback Window Size:</label>
                     <input type="number" id="lookback" value="400" readonly>
-                    <small class="form-text">Fixed at 400 data points</small>
+                    <small class="form-text" data-i18n="parameters.lookback_desc">Fixed at 400 data points</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="pred-len">Prediction Length:</label>
+                    <label for="pred-len" data-i18n="parameters.pred_len">Prediction Length:</label>
                     <input type="number" id="pred-len" value="120" readonly>
-                    <small class="form-text">Fixed at 120 data points</small>
+                    <small class="form-text" data-i18n="parameters.pred_len_desc">Fixed at 120 data points</small>
                 </div>
 
                 <!-- Prediction Quality Parameters -->
                 <div class="form-group">
-                    <label for="temperature">Prediction Temperature (T):</label>
+                    <label for="temperature" data-i18n="parameters.temperature">Prediction Temperature (T):</label>
                     <input type="range" id="temperature" value="1.0" min="0.1" max="2.0" step="0.1">
                     <span id="temperature-value">1.0</span>
-                    <small class="form-text">Controls prediction randomness, higher values make predictions more
-                        diverse, lower values make predictions more conservative</small>
+                    <small class="form-text" data-i18n="parameters.temperature_desc">Controls prediction randomness, higher values make predictions more diverse, lower values make predictions more conservative</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="top-p">Nucleus Sampling Parameter (top_p):</label>
+                    <label for="top-p" data-i18n="parameters.top_p">Nucleus Sampling Parameter (top_p):</label>
                     <input type="range" id="top-p" value="0.9" min="0.1" max="1.0" step="0.1">
                     <span id="top-p-value">0.9</span>
-                    <small class="form-text">Controls prediction diversity, higher values consider broader probability
-                        distributions</small>
+                    <small class="form-text" data-i18n="parameters.top_p_desc">Controls prediction diversity, higher values consider broader probability distributions</small>
                 </div>
 
                 <div class="form-group">
-                    <label for="sample-count">Sample Count:</label>
+                    <label for="sample-count" data-i18n="parameters.sample_count">Sample Count:</label>
                     <input type="number" id="sample-count" value="1" min="1" max="5" step="1">
-                    <small class="form-text">Generate multiple prediction samples to improve quality (recommended
-                        1-3)</small>
+                    <small class="form-text" data-i18n="parameters.sample_count_desc">Generate multiple prediction samples to improve quality (recommended 1-3)</small>
                 </div>
 
-                <button id="predict-btn" class="btn btn-success" disabled>
+                <button id="predict-btn" class="btn btn-success" disabled data-i18n="control_panel.start_prediction">
                     🔮 Start Prediction
                 </button>
 
                 <!-- Loading Status -->
                 <div id="loading" class="loading">
                     <div class="spinner"></div>
-                    <p>Processing, please wait...</p>
+                    <p data-i18n="status_messages.processing">Processing, please wait...</p>
                 </div>
             </div>
 
             <div class="chart-container">
-                <h2>📈 Prediction Results Chart</h2>
+                <h2 data-i18n="chart.title">📈 Prediction Results Chart</h2>
                 <div id="chart"></div>
 
                 <!-- Comparison Analysis -->
                 <div id="comparison-section" class="comparison-section" style="display: none;">
-                    <h3>📊 Prediction vs Actual Data Comparison</h3>
+                    <h3 data-i18n="comparison.title">📊 Prediction vs Actual Data Comparison</h3>
                     <div id="comparison-info" class="comparison-info">
-                        <p><strong>Prediction Type:</strong> <span id="prediction-type">-</span></p>
-                        <p><strong>Comparison Data:</strong> <span id="comparison-data">-</span></p>
+                        <p><strong data-i18n="comparison.prediction_type">Prediction Type:</strong> <span id="prediction-type">-</span></p>
+                        <p><strong data-i18n="comparison.comparison_data">Comparison Data:</strong> <span id="comparison-data">-</span></p>
                     </div>
 
                     <div class="error-stats">
                         <div class="error-stat">
-                            <h4>Mean Absolute Error</h4>
+                            <h4 data-i18n="comparison.mae">Mean Absolute Error</h4>
                             <div class="value" id="mae">-</div>
-                            <div class="unit">Price Units</div>
+                            <div class="unit" data-i18n="comparison.price_units">Price Units</div>
                         </div>
                         <div class="error-stat">
-                            <h4>Root Mean Square Error</h4>
+                            <h4 data-i18n="comparison.rmse">Root Mean Square Error</h4>
                             <div class="value" id="rmse">-</div>
-                            <div class="unit">Price Units</div>
+                            <div class="unit" data-i18n="comparison.price_units">Price Units</div>
                         </div>
                         <div class="error-stat">
-                            <h4>Mean Absolute Percentage Error</h4>
+                            <h4 data-i18n="comparison.mape">Mean Absolute Percentage Error</h4>
                             <div class="value" id="mape">-</div>
                             <div class="unit">%</div>
                         </div>
                     </div>
 
                     <div class="error-details">
-                        <h4>Detailed Comparison Data:</h4>
+                        <h4 data-i18n="comparison.detailed_comparison">Detailed Comparison Data:</h4>
                         <div style="max-height: 300px; overflow-y: auto;">
                             <table class="comparison-table">
                                 <thead>
                                     <tr>
-                                        <th>Time</th>
-                                        <th>Actual Open</th>
-                                        <th>Predicted Open</th>
-                                        <th>Actual High</th>
-                                        <th>Predicted High</th>
-                                        <th>Actual Low</th>
-                                        <th>Predicted Low</th>
-                                        <th>Actual Close</th>
-                                        <th>Predicted Close</th>
+                                        <th data-i18n="comparison.time">Time</th>
+                                        <th data-i18n="comparison.actual_open">Actual Open</th>
+                                        <th data-i18n="comparison.predicted_open">Predicted Open</th>
+                                        <th data-i18n="comparison.actual_high">Actual High</th>
+                                        <th data-i18n="comparison.predicted_high">Predicted High</th>
+                                        <th data-i18n="comparison.actual_low">Actual Low</th>
+                                        <th data-i18n="comparison.predicted_low">Predicted Low</th>
+                                        <th data-i18n="comparison.actual_close">Actual Close</th>
+                                        <th data-i18n="comparison.predicted_close">Predicted Close</th>
                                     </tr>
                                 </thead>
                                 <tbody id="comparison-tbody">
@@ -779,6 +811,131 @@
                 initializeWallet();
             });
         });
+
+        // Initialize language selector after i18n is ready
+        window.addEventListener('languageChanged', function(event) {
+            console.log('🔄 Language changed event received:', event.detail.language);
+            const languageSelect = document.getElementById('language-select');
+            if (languageSelect) {
+                // Ensure the selector reflects the actual current language
+                languageSelect.value = event.detail.language;
+                console.log(`📝 Updated language selector to: ${event.detail.language}`);
+            }
+        });
+
+        // Setup language selector
+        function setupLanguageSelector() {
+            const languageSelect = document.getElementById('language-select');
+            console.log('🔧 SetupLanguageSelector called:', {
+                hasLanguageSelect: !!languageSelect,
+                hasI18n: !!window.i18n,
+                isI18nReady: window.i18n ? window.i18n.isReady : false,
+                currentLanguage: window.i18n ? window.i18n.getCurrentLanguage() : 'N/A'
+            });
+
+            if (languageSelect && window.i18n && window.i18n.isReady) {
+                console.log('🔧 Setting up language selector...');
+                const currentLang = window.i18n.getCurrentLanguage();
+                console.log(`🌐 Current i18n language: ${currentLang}`);
+
+                // Set the current selection
+                const oldValue = languageSelect.value;
+                languageSelect.value = currentLang;
+                console.log(`📝 Language selector value: ${oldValue} -> ${languageSelect.value}`);
+
+                // Remove existing event listeners to avoid duplicates
+                const newLanguageSelect = languageSelect.cloneNode(true);
+                languageSelect.parentNode.replaceChild(newLanguageSelect, languageSelect);
+
+                // Add fresh event listener
+                newLanguageSelect.addEventListener('change', function(e) {
+                    console.log('🔄 Language select changed to:', e.target.value);
+                    console.log('🔄 Calling window.i18n.switchLanguage...');
+                    const result = window.i18n.switchLanguage(e.target.value);
+                    console.log('🔄 SwitchLanguage result:', result);
+                });
+
+                console.log('✅ Language selector setup complete');
+                console.log(`📋 Final language selector value: ${newLanguageSelect.value}`);
+
+                // Test a manual translation
+                console.log('🧪 Testing translation:');
+                console.log(`   - title (en): ${window.i18n.t('title')}`);
+                console.log(`   - wallet.connect (en): ${window.i18n.t('wallet.connect')}`);
+
+            } else {
+                console.log('⏳ Waiting for i18n to be ready...');
+                setTimeout(setupLanguageSelector, 200);
+            }
+        }
+
+        // Check if i18n is loaded and setup language selector
+        function checkI18nReady() {
+            console.log('🔍 checkI18nReady called:', {
+                hasI18n: !!window.i18n,
+                isReady: window.i18n ? window.i18n.isReady : false,
+                hasTranslations: window.i18n ? Object.keys(window.i18n.translations).length : 0,
+                currentLang: window.i18n ? window.i18n.getCurrentLanguage() : 'N/A'
+            });
+
+            if (window.i18n && window.i18n.isReady) {
+                console.log('✅ i18n is ready, setting up language selector');
+                setupLanguageSelector();
+            } else {
+                console.log('⏳ i18n not ready yet, retrying...');
+                // Add timeout to prevent infinite loops
+                if (!checkI18nReady.attempts) {
+                    checkI18nReady.attempts = 0;
+                }
+                checkI18nReady.attempts++;
+
+                if (checkI18nReady.attempts > 50) { // 10 seconds timeout
+                    console.error('❌ i18n initialization timeout - proceeding without i18n');
+                    return;
+                }
+
+                setTimeout(checkI18nReady, 200);
+            }
+        }
+
+        // Start checking for i18n readiness after a shorter delay
+        setTimeout(checkI18nReady, 100);
+
+        // Helper function to translate messages with parameters
+        function t(key, params = {}) {
+            return window.i18n ? window.i18n.t(key, params) : key;
+        }
+
+        // Enhanced helper function to update element with i18n support
+        function updateElementWithI18n(elementId, key, params = {}) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.innerText = t(key, params);
+                element.setAttribute('data-i18n', key);
+                if (Object.keys(params).length > 0) {
+                    element.setAttribute('data-i18n-params', JSON.stringify(params));
+                }
+            }
+        }
+
+        // Enhanced helper function to update status with i18n support
+        function showStatusI18n(type, key, params = {}) {
+            const statusDiv = document.getElementById('model-status');
+            if (statusDiv) {
+                statusDiv.className = `status ${type}`;
+                statusDiv.innerText = t(key, params);
+                statusDiv.setAttribute('data-i18n', key);
+                if (Object.keys(params).length > 0) {
+                    statusDiv.setAttribute('data-i18n-params', JSON.stringify(params));
+                }
+                statusDiv.style.display = 'block';
+
+                // Auto-hide
+                setTimeout(() => {
+                    statusDiv.style.display = 'none';
+                }, 5000);
+            }
+        }
 
         // 等待 ethers.js 加载完成
         function waitForEthers() {
@@ -824,11 +981,11 @@
             // 检查 ethers 是否可用（兼容 v5 和 v6）
             if (typeof ethers === 'undefined') {
                 console.error('❌ Ethers.js is not available');
-                showStatus('error', 'Web3 库加载失败，请检查浏览器控制台或刷新页面重试');
+                showStatus('error', t('wallet.web3_not_loaded'));
                 const connectBtn = document.getElementById('connect-wallet-btn');
                 if (connectBtn) {
                     connectBtn.disabled = true;
-                    connectBtn.textContent = '⚠️ Web3 库未加载';
+                    connectBtn.textContent = '⚠️ ' + t('wallet.unsupported_version');
                 }
                 return;
             }
@@ -840,7 +997,7 @@
             if (!isV5 && !isV6) {
                 console.error('❌ Unsupported ethers.js version');
                 console.log('ethers keys:', Object.keys(ethers).slice(0, 10));
-                showStatus('error', '不支持的 Web3 库版本');
+                showStatus('error', t('wallet.unsupported_version'));
                 return;
             }
 
@@ -879,7 +1036,7 @@
                 // 检查 ethers 是否已加载（兼容 v5 和 v6）
                 if (typeof ethers === 'undefined') {
                     console.error('Ethers.js check failed: ethers is undefined');
-                    showStatus('error', 'Web3 库尚未加载完成，请刷新页面重试');
+                    showStatus('error', t('wallet.web3_not_loaded'));
                     return;
                 }
 
@@ -889,12 +1046,12 @@
 
                 if (!isV5 && !isV6) {
                     console.error('Unsupported ethers version');
-                    showStatus('error', '不支持的 Web3 库版本');
+                    showStatus('error', t('wallet.unsupported_version'));
                     return;
                 }
 
                 if (typeof window.ethereum === 'undefined') {
-                    alert('请安装 MetaMask 或其他 Web3 钱包扩展');
+                    alert(t('wallet.install_metamask'));
                     window.open('https://metamask.io/', '_blank');
                     return;
                 }
@@ -924,14 +1081,14 @@
 
                 // 显示钱包已连接界面
                 showWalletConnected();
-                showStatus('success', '钱包连接成功！请点击"登录服务端"完成身份验证');
+                showStatus('success', t('wallet.login_success'));
 
             } catch (error) {
                 console.error('Wallet connection failed:', error);
                 if (error.code === 4001) {
-                    showStatus('error', '用户拒绝了连接请求');
+                    showStatus('error', t('wallet.user_rejected'));
                 } else {
-                    showStatus('error', '连接失败: ' + (error.message || error));
+                    showStatus('error', t('wallet.connection_failed', {error: error.message || error}));
                 }
             }
         }
@@ -939,7 +1096,7 @@
         // 登录服务端 - 完成挑战签名
         async function loginToServer() {
             if (!walletConnected || !currentAddress) {
-                showStatus('error', '请先连接钱包');
+                showStatus('error', t('wallet.connect_first'));
                 return;
             }
 
@@ -968,9 +1125,9 @@
                 if (verifyResponse.data.success) {
                     isLoggedIn = true;
                     if (verifyResponse.data.is_new_user) {
-                        showStatus('success', '🎉 欢迎新用户！钱包地址已自动注册');
+                        showStatus('success', t('wallet.welcome_new_user'));
                     } else {
-                        showStatus('success', '登录成功！');
+                        showStatus('success', t('wallet.login_success'));
                     }
                     showWalletInfo(verifyResponse.data.user);
                     await loadDataFiles();
@@ -979,9 +1136,9 @@
             } catch (error) {
                 console.error('Server login failed:', error);
                 if (error.code === 4001) {
-                    showStatus('error', '用户拒绝了签名请求');
+                    showStatus('error', t('wallet.user_rejected'));
                 } else {
-                    showStatus('error', '登录失败: ' + (error.response?.data?.error || error.message));
+                    showStatus('error', t('wallet.login_failed', {error: error.response?.data?.error || error.message}));
                 }
             }
         }
@@ -992,7 +1149,7 @@
             document.getElementById('wallet-info-section').style.display = 'block';
             document.getElementById('wallet-address-display').textContent =
                 `${user.wallet_address.substring(0, 6)}...${user.wallet_address.substring(38)}`;
-            document.getElementById('user-nickname').textContent = user.nickname || '未设置';
+            document.getElementById('user-nickname').textContent = user.nickname || t('common.not_set');
         }
 
         // Show wallet connected status (local connection only)
@@ -1007,7 +1164,7 @@
         function showWalletConnect() {
             const connectBtn = document.getElementById('connect-wallet-btn');
             connectBtn.style.display = 'block';
-            connectBtn.textContent = '🔐 连接钱包';
+            connectBtn.textContent = t('wallet.connect');
             document.getElementById('wallet-connect-section').style.display = 'block';
             document.getElementById('wallet-login-section').style.display = 'none';
             document.getElementById('wallet-info-section').style.display = 'none';
@@ -1036,10 +1193,10 @@
 
                 showWalletConnect();
                 await loadDataFiles();
-                showStatus('success', '已登出');
+                showStatus('success', t('status_messages.logout_success'));
             } catch (error) {
                 console.error('Logout failed:', error);
-                showStatus('error', '登出失败');
+                showStatus('error', t('status_messages.logout_failed'));
             }
         }
 
@@ -1069,21 +1226,21 @@
 
                 if (status.loaded) {
                     modelLoaded = true;
-                    document.getElementById('model-select-small').innerText = `Current Model is ${status.current_model.key}`;
-                    document.getElementById('device-select-small').innerText = `Current Device is ${status.current_model.device}`;
-                    //showStatus('success', `Model loaded: ${status.current_model.name} on ${status.current_model.device}`);
+                    updateElementWithI18n('model-select-small', 'model_status.current_model', {model: status.current_model.key});
+                    updateElementWithI18n('device-select-small', 'model_status.current_device', {device: status.current_model.device});
+                    //showStatusI18n('success', 'status_messages.model_loaded', {model: status.current_model.name, device: status.current_model.device});
                 } else if (status.available) {
                     modelLoaded = false;
                     document.getElementById('predict-btn').disabled = true;
-                    document.getElementById('model-select-small').innerText = "Model available but not loaded";
-                    document.getElementById('device-select-small').innerText = "Select the device to run the model on";
-                    // showStatus('info', 'Model available but not loaded');
+                    updateElementWithI18n('model-select-small', 'model_status.not_loaded');
+                    updateElementWithI18n('device-select-small', 'model_status.not_loaded');
+                    // showStatusI18n('info', 'status_messages.model_available');
                 } else {
                     modelLoaded = false;
                     document.getElementById('predict-btn').disabled = true;
-                    document.getElementById('model-select-small').innerText = "Model library not available";
-                    document.getElementById('device-select-small').innerText = "Select the device to run the model on";
-                    // showStatus('warning', 'Model library not available');
+                    updateElementWithI18n('model-select-small', 'model_status.unavailable');
+                    updateElementWithI18n('device-select-small', 'model_status.unavailable');
+                    // showStatusI18n('warning', 'status_messages.model_unavailable');
                 }
             } catch (error) {
                 console.error('❌ Failed to get model status:', error);
@@ -1097,7 +1254,7 @@
                 const dataFiles = response.data;
 
                 const dataFileSelect = document.getElementById('data-file-select');
-                dataFileSelect.innerHTML = '<option value="">Please select data file</option>';
+                dataFileSelect.innerHTML = `<option value="" data-i18n="control_panel.select_data_file">${t('control_panel.select_data_file')}</option>`;
 
                 dataFiles.forEach(file => {
                     const option = document.createElement('option');
@@ -1109,7 +1266,7 @@
                 console.log('✅ Data file list loaded successfully:', dataFiles);
             } catch (error) {
                 console.error('❌ Failed to load data file list:', error);
-                showStatus('error', 'Failed to load data file list');
+                showStatus('error', t('status_messages.data_load_failed', {error: error.message}));
             }
         }
 
@@ -1126,7 +1283,7 @@
             const fileExtension = file.name.split('.').pop().toLowerCase();
 
             if (!allowedTypes.includes(fileExtension)) {
-                showStatus('error', `Invalid file type. Allowed types: ${allowedTypes.join(', ')}`);
+                showStatus('error', t('status_messages.file_type_error', {types: allowedTypes.join(', ')}));
                 fileInput.value = '';
                 return;
             }
@@ -1145,7 +1302,7 @@
                 });
 
                 if (response.data.success) {
-                    showStatus('success', response.data.message);
+                    showStatus('success', t('status_messages.file_uploaded'));
 
                     // Reload data file list
                     await loadDataFiles();
@@ -1163,7 +1320,7 @@
                 }
             } catch (error) {
                 console.error('❌ File upload failed:', error);
-                showStatus('error', `File upload failed: ${error.response?.data?.error || error.message}`);
+                showStatus('error', t('status_messages.upload_failed', {error: error.response?.data?.error || error.message}));
             } finally {
                 showLoading(false);
                 document.getElementById('upload-trigger-btn').disabled = false;
@@ -1176,7 +1333,7 @@
             const filePath = document.getElementById('data-file-select').value;
 
             if (!filePath) {
-                showStatus('error', 'Please select a data file to load');
+                showStatus('error', t('control_panel.select_data_file'));
                 return;
             }
 
@@ -1192,7 +1349,7 @@
                     currentDataFile = filePath;
                     currentDataInfo = response.data.data_info;
                     showDataInfo(response.data.data_info);
-                    showStatus('success', response.data.message);
+                    showStatus('success', t('status_messages.data_loaded'));
 
                     // Update prediction button status
                     if (modelLoaded) {
@@ -1205,7 +1362,7 @@
                 }
             } catch (error) {
                 console.error('❌ Data loading failed:', error);
-                showStatus('error', `Data loading failed: ${error.response?.data?.error || error.message}`);
+                showStatus('error', t('status_messages.data_load_failed', {error: error.response?.data?.error || error.message}));
             } finally {
                 showLoading(false);
                 document.getElementById('load-data-btn').disabled = false;
@@ -1368,11 +1525,11 @@
             const endDate = new Date(endTime);
 
             // Update display information
-            document.getElementById('window-start').textContent = `Start: ${startDate.toLocaleDateString()}`;
-            document.getElementById('window-end').textContent = `End: ${endDate.toLocaleDateString()}`;
+            document.getElementById('window-start').textContent = `${t('time_window.start')} ${startDate.toLocaleDateString()}`;
+            document.getElementById('window-end').textContent = `${t('time_window.end')} ${endDate.toLocaleDateString()}`;
 
             // Display fixed window size
-            document.getElementById('window-size').textContent = `Window Size: 400 + 120 = 520 data points (fixed)`;
+            document.getElementById('window-size').textContent = t('time_window.fixed_window');
 
             // Input field values remain fixed
             document.getElementById('lookback').value = 400;
@@ -1393,7 +1550,7 @@
 
             if (windowSize > totalRows) {
                 // If window size exceeds total data amount, show error
-                showStatus('error', `Insufficient data, need at least ${windowSize} data points, currently only ${totalRows} available`);
+                showStatus('error', t('status_messages.insufficient_data', {required: windowSize, available: totalRows}));
                 return;
             }
 
@@ -1429,13 +1586,13 @@
         // Start prediction
         async function startPrediction() {
             if (!modelLoaded) {
-                showStatus('error', 'Kronos model is not available');
+                showStatus('error', t('status_messages.model_unavailable'));
                 document.getElementById('predict-btn').disabled = true;
                 return;
             }
 
             if (!currentDataFile) {
-                showStatus('error', 'Please load data file first');
+                showStatus('error', t('control_panel.select_data_file'));
                 return;
             }
 
@@ -1451,7 +1608,7 @@
                 const startPercentage = parseFloat(startHandle.style.left) / 100;
 
                 if (!sliderData) {
-                    showStatus('error', 'Time window slider not initialized');
+                    showStatus('error', t('time_window.title') + ' not initialized');
                     return;
                 }
 
@@ -1482,13 +1639,13 @@
                 if (response.data.success) {
                     // Display prediction results
                     displayPredictionResult(response.data);
-                    showStatus('success', response.data.message);
+                    showStatus('success', t('status_messages.prediction_started'));
                 } else {
                     showStatus('error', response.data.error);
                 }
             } catch (error) {
                 console.error('❌ Prediction failed:', error);
-                showStatus('error', `Prediction failed: ${error.response?.data?.error || error.message}`);
+                showStatus('error', t('status_messages.prediction_failed', {error: error.response?.data?.error || error.message}));
             } finally {
                 showLoading(false);
             }
@@ -1514,7 +1671,7 @@
 
             // Update comparison information
             document.getElementById('prediction-type').textContent = result.prediction_type;
-            document.getElementById('comparison-data').textContent = `${result.actual_data.length} actual data points`;
+            document.getElementById('comparison-data').textContent = `${result.actual_data.length} ${t('comparison.data_points')}`;
 
             // Calculate error statistics
             const errorStats = getPredictionQuality(result.prediction_results, result.actual_data);

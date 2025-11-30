@@ -1,0 +1,136 @@
+{
+  "title": "Kronos 金融预测Web界面",
+  "subtitle": "基于AI的金融K线数据预测分析平台",
+
+  "wallet": {
+    "connect": "🔐 连接钱包",
+    "connected": "钱包已连接:",
+    "login": "🔑 登录服务端",
+    "logout": "登出",
+    "address": "钱包地址:",
+    "nickname": "昵称",
+    "invite_placeholder": "邀请码（新用户需要）",
+    "invite_required": "请输入邀请码",
+    "login_success": "登录成功！",
+    "welcome_new_user": "🎉 欢迎新用户！钱包地址已自动注册",
+    "connect_first": "请先连接钱包",
+    "user_rejected": "用户拒绝了请求",
+    "web3_not_loaded": "Web3库未加载完成，请刷新页面重试",
+    "install_metamask": "请安装 MetaMask 或其他 Web3 钱包扩展",
+    "unsupported_version": "不支持的 Web3 库版本"
+  },
+
+  "disclaimer": {
+    "text": "该页面基于开源项目Kronos，仅供个人学习交流AI Agent在金融领域的应用，不得用于商业用途。连接Web3钱包后可进行登录，第一次登录需要输入邀请码，服务端只会获取到钱包地址信息"
+  },
+
+  "control_panel": {
+    "title": "🎯 控制面板",
+    "model_status": "模型状态:",
+    "upload_file": "上传数据文件:",
+    "select_file": "选择数据文件:",
+    "load_file_list_first": "请先加载数据文件列表",
+    "select_data_file": "请选择数据文件",
+    "load_data": "📁 加载数据",
+    "upload_button": "📤 上传文件",
+    "start_prediction": "🔮 开始预测"
+  },
+
+  "data_info": {
+    "title": "📊 数据信息",
+    "rows": "行数:",
+    "columns": "列数:",
+    "time_range": "时间范围:",
+    "price_range": "价格范围:",
+    "timeframe": "时间频率:",
+    "prediction_columns": "预测列:"
+  },
+
+  "time_window": {
+    "title": "⏰ 时间窗口选择",
+    "start": "开始:",
+    "end": "结束:",
+    "window_size": "窗口大小: 400+120=520个数据点",
+    "fixed_window": "窗口大小: 400 + 120 = 520个数据点（固定）",
+    "description": "拖动滑块选择520个数据点的时间窗口位置，绿色区域表示固定的400+120数据点范围"
+  },
+
+  "parameters": {
+    "lookback": "回溯窗口大小:",
+    "lookback_desc": "固定为400个数据点",
+    "pred_len": "预测长度:",
+    "pred_len_desc": "固定为120个数据点",
+    "temperature": "预测温度 (T):",
+    "temperature_desc": "控制预测随机性，值越高预测越多样化，值越低预测越保守",
+    "top_p": "核采样参数 (top_p):",
+    "top_p_desc": "控制预测多样性，值越高考虑更广泛的概率分布",
+    "sample_count": "采样数量:",
+    "sample_count_desc": "生成多个预测样本以提高质量（推荐1-3个）"
+  },
+
+  "chart": {
+    "title": "📈 预测结果图表"
+  },
+
+  "comparison": {
+    "title": "📊 预测与实际数据对比",
+    "prediction_type": "预测类型:",
+    "comparison_data": "对比数据:",
+    "data_points": "个实际数据点",
+    "mae": "平均绝对误差",
+    "rmse": "均方根误差",
+    "mape": "平均绝对百分比误差",
+    "price_units": "价格单位",
+    "detailed_comparison": "详细对比数据:",
+    "time": "时间",
+    "actual_open": "实际开盘价",
+    "predicted_open": "预测开盘价",
+    "actual_high": "实际最高价",
+    "predicted_high": "预测最高价",
+    "actual_low": "实际最低价",
+    "predicted_low": "预测最低价",
+    "actual_close": "实际收盘价",
+    "predicted_close": "预测收盘价"
+  },
+
+  "status_messages": {
+    "processing": "处理中，请稍候...",
+    "model_loaded": "模型已加载: {model} 在 {device} 上",
+    "model_available": "模型可用但未加载",
+    "model_unavailable": "模型库不可用",
+    "file_uploaded": "文件上传成功",
+    "data_loaded": "数据加载成功",
+    "prediction_started": "预测开始成功",
+    "insufficient_data": "数据不足，需要至少 {required} 个数据点，当前只有 {available} 个",
+    "file_type_error": "无效的文件类型。允许的类型: {types}",
+    "connection_failed": "连接失败: {error}",
+    "login_failed": "登录失败: {error}",
+    "upload_failed": "文件上传失败: {error}",
+    "data_load_failed": "数据加载失败: {error}",
+    "prediction_failed": "预测失败: {error}",
+    "logout_success": "登出成功",
+    "logout_failed": "登出失败"
+  },
+
+  "file_upload": {
+    "csv_desc": "上传CSV或Feather文件到数据目录",
+    "auto_select": "请选择数据文件"
+  },
+
+  "model_status": {
+    "current_model": "当前模型是 {model}",
+    "current_device": "当前设备是 {device}",
+    "not_loaded": "模型可用但未加载",
+    "unavailable": "模型库不可用"
+  },
+
+  "language": {
+    "switch": "语言",
+    "english": "English",
+    "chinese": "中文"
+  },
+
+  "common": {
+    "not_set": "未设置"
+  }
+}

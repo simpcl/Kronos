@@ -1,0 +1,136 @@
+{
+  "title": "Kronos Financial Prediction Web UI",
+  "subtitle": "AI-based financial K-line data prediction analysis platform",
+
+  "wallet": {
+    "connect": "🔐 Connect Wallet",
+    "connected": "Wallet connected:",
+    "login": "🔑 Login to Server",
+    "logout": "Logout",
+    "address": "Wallet Address:",
+    "nickname": "Nickname",
+    "invite_placeholder": "Invite code (required for new users)",
+    "invite_required": "Please enter invite code",
+    "login_success": "Login successful!",
+    "welcome_new_user": "🎉 Welcome new user! Wallet address automatically registered",
+    "connect_first": "Please connect wallet first",
+    "user_rejected": "User rejected the request",
+    "web3_not_loaded": "Web3 library not loaded, please refresh page and try again",
+    "install_metamask": "Please install MetaMask or other Web3 wallet extension",
+    "unsupported_version": "Unsupported Web3 library version"
+  },
+
+  "disclaimer": {
+    "text": "This page is based on the open-source project Kronos, for personal learning and communication of AI Agent applications in the financial field only, not for commercial use. Connect Web3 wallet to login, first-time login requires an invite code. The server will only obtain wallet address information."
+  },
+
+  "control_panel": {
+    "title": "🎯 Control Panel",
+    "model_status": "Model Status:",
+    "upload_file": "Upload Data File:",
+    "select_file": "Select Data File:",
+    "load_file_list_first": "Please load data file list first",
+    "select_data_file": "Please select data file",
+    "load_data": "📁 Load Data",
+    "upload_button": "📤 Upload File",
+    "start_prediction": "🔮 Start Prediction"
+  },
+
+  "data_info": {
+    "title": "📊 Data Information",
+    "rows": "Rows:",
+    "columns": "Columns:",
+    "time_range": "Time Range:",
+    "price_range": "Price Range:",
+    "timeframe": "Time Frequency:",
+    "prediction_columns": "Prediction Columns:"
+  },
+
+  "time_window": {
+    "title": "⏰ Time Window Selection",
+    "start": "Start:",
+    "end": "End:",
+    "window_size": "Window Size: 400+120=520 data points",
+    "fixed_window": "Window Size: 400 + 120 = 520 data points (fixed)",
+    "description": "Drag slider to select time window position for 520 data points, green area represents fixed 400+120 data point range"
+  },
+
+  "parameters": {
+    "lookback": "Lookback Window Size:",
+    "lookback_desc": "Fixed at 400 data points",
+    "pred_len": "Prediction Length:",
+    "pred_len_desc": "Fixed at 120 data points",
+    "temperature": "Prediction Temperature (T):",
+    "temperature_desc": "Controls prediction randomness, higher values make predictions more diverse, lower values make predictions more conservative",
+    "top_p": "Nucleus Sampling Parameter (top_p):",
+    "top_p_desc": "Controls prediction diversity, higher values consider broader probability distributions",
+    "sample_count": "Sample Count:",
+    "sample_count_desc": "Generate multiple prediction samples to improve quality (recommended 1-3)"
+  },
+
+  "chart": {
+    "title": "📈 Prediction Results Chart"
+  },
+
+  "comparison": {
+    "title": "📊 Prediction vs Actual Data Comparison",
+    "prediction_type": "Prediction Type:",
+    "comparison_data": "Comparison Data:",
+    "data_points": "actual data points",
+    "mae": "Mean Absolute Error",
+    "rmse": "Root Mean Square Error",
+    "mape": "Mean Absolute Percentage Error",
+    "price_units": "Price Units",
+    "detailed_comparison": "Detailed Comparison Data:",
+    "time": "Time",
+    "actual_open": "Actual Open",
+    "predicted_open": "Predicted Open",
+    "actual_high": "Actual High",
+    "predicted_high": "Predicted High",
+    "actual_low": "Actual Low",
+    "predicted_low": "Predicted Low",
+    "actual_close": "Actual Close",
+    "predicted_close": "Predicted Close"
+  },
+
+  "status_messages": {
+    "processing": "Processing, please wait...",
+    "model_loaded": "Model loaded: {model} on {device}",
+    "model_available": "Model available but not loaded",
+    "model_unavailable": "Model library not available",
+    "file_uploaded": "File uploaded successfully",
+    "data_loaded": "Data loaded successfully",
+    "prediction_started": "Prediction started successfully",
+    "insufficient_data": "Insufficient data, need at least {required} data points, currently only {available} available",
+    "file_type_error": "Invalid file type. Allowed types: {types}",
+    "connection_failed": "Connection failed: {error}",
+    "login_failed": "Login failed: {error}",
+    "upload_failed": "File upload failed: {error}",
+    "data_load_failed": "Data loading failed: {error}",
+    "prediction_failed": "Prediction failed: {error}",
+    "logout_success": "Logged out successfully",
+    "logout_failed": "Logout failed"
+  },
+
+  "file_upload": {
+    "csv_desc": "Upload CSV or Feather file to data directory",
+    "auto_select": "Please select data file"
+  },
+
+  "model_status": {
+    "current_model": "Current Model is {model}",
+    "current_device": "Current Device is {device}",
+    "not_loaded": "Model available but not loaded",
+    "unavailable": "Model library not available"
+  },
+
+  "language": {
+    "switch": "Language",
+    "english": "English",
+    "chinese": "中文"
+  },
+
+  "common": {
+    "not_set": "Not set"
+  }
+}
