@@ -4,7 +4,7 @@ TinyWeb 是基于 Flask 的金融预测 Web 应用，集成了 Kronos 时间序�
 
 ## 环境要求
 
-- Python 3.8+
+- Python 3.11+
 - 操作系统：Linux、macOS 或 Windows
 - 内存：建议 8GB 以上（如果使用 GPU 预测）
 - 磁盘空间：至少 2GB 可用空间

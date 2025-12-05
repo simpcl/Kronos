@@ -4,7 +4,7 @@ TinyWeb is a Flask-based financial prediction web application that integrates th
 
 ## System Requirements
 
-- Python 3.8+
+- Python 3.11+
 - Operating System: Linux, macOS, or Windows
 - Memory: 8GB+ recommended (if using GPU for prediction)
 - Disk Space: At least 2GB available space
